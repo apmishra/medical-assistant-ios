@@ -1,0 +1,291 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		FA0000010000000000000001 /* MedicalAssistantApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000020000000000000001 /* MedicalAssistantApp.swift */; };
+		FA0000030000000000000001 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000040000000000000001 /* ContentView.swift */; };
+		FA0000050000000000000001 /* MedicalModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000060000000000000001 /* MedicalModels.swift */; };
+		FA0000070000000000000001 /* ClaudeAPIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000080000000000000001 /* ClaudeAPIService.swift */; };
+		FA0000090000000000000001 /* MedicalAssistantViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000100000000000000001 /* MedicalAssistantViewModel.swift */; };
+		FA0000110000000000000001 /* UploadView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000120000000000000001 /* UploadView.swift */; };
+		FA0000130000000000000001 /* SymptomsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000140000000000000001 /* SymptomsView.swift */; };
+		FA0000150000000000000001 /* CausesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000160000000000000001 /* CausesView.swift */; };
+		FA0000170000000000000001 /* SolutionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000180000000000000001 /* SolutionsView.swift */; };
+		FA0000190000000000000001 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000200000000000000001 /* SettingsView.swift */; };
+		FA0000210000000000000001 /* DebugView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000220000000000000001 /* DebugView.swift */; };
+		FA0000230000000000000001 /* ChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000240000000000000001 /* ChatView.swift */; };
+		FA0000250000000000000001 /* APIKeyInputView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000260000000000000001 /* APIKeyInputView.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		FA0000020000000000000001 /* MedicalAssistantApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MedicalAssistantApp.swift; sourceTree = "<group>"; };
+		FA0000040000000000000001 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		FA0000060000000000000001 /* MedicalModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MedicalModels.swift; sourceTree = "<group>"; };
+		FA0000080000000000000001 /* ClaudeAPIService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeAPIService.swift; sourceTree = "<group>"; };
+		FA0000100000000000000001 /* MedicalAssistantViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MedicalAssistantViewModel.swift; sourceTree = "<group>"; };
+		FA0000120000000000000001 /* UploadView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UploadView.swift; sourceTree = "<group>"; };
+		FA0000140000000000000001 /* SymptomsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SymptomsView.swift; sourceTree = "<group>"; };
+		FA0000160000000000000001 /* CausesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CausesView.swift; sourceTree = "<group>"; };
+		FA0000180000000000000001 /* SolutionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SolutionsView.swift; sourceTree = "<group>"; };
+		FA0000200000000000000001 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		FA0000220000000000000001 /* DebugView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugView.swift; sourceTree = "<group>"; };
+		FA0000240000000000000001 /* ChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatView.swift; sourceTree = "<group>"; };
+		FA0000260000000000000001 /* APIKeyInputView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIKeyInputView.swift; sourceTree = "<group>"; };
+		FA0000270000000000000001 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		FAA000010000000000000001 /* MedicalAssistant.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MedicalAssistant.app; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		FA0000280000000000000001 = {
+			isa = PBXGroup;
+			children = (
+				FA0000290000000000000001 /* MedicalAssistant */,
+				FA0000300000000000000001 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		FA0000290000000000000001 /* MedicalAssistant */ = {
+			isa = PBXGroup;
+			children = (
+				FA0000020000000000000001 /* MedicalAssistantApp.swift */,
+				FA0000310000000000000001 /* Models */,
+				FA0000320000000000000001 /* Views */,
+				FA0000330000000000000001 /* ViewModels */,
+				FA0000340000000000000001 /* Services */,
+				FA0000350000000000000001 /* Resources */,
+			);
+			path = MedicalAssistant;
+			sourceTree = "<group>";
+		};
+		FA0000300000000000000001 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				FAA000010000000000000001 /* MedicalAssistant.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		FA0000310000000000000001 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				FA0000060000000000000001 /* MedicalModels.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		FA0000320000000000000001 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				FA0000040000000000000001 /* ContentView.swift */,
+				FA0000120000000000000001 /* UploadView.swift */,
+				FA0000140000000000000001 /* SymptomsView.swift */,
+				FA0000160000000000000001 /* CausesView.swift */,
+				FA0000180000000000000001 /* SolutionsView.swift */,
+				FA0000200000000000000001 /* SettingsView.swift */,
+				FA0000220000000000000001 /* DebugView.swift */,
+				FA0000240000000000000001 /* ChatView.swift */,
+				FA0000260000000000000001 /* APIKeyInputView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		FA0000330000000000000001 /* ViewModels */ = {
+			isa = PBXGroup;
+			children = (
+				FA0000100000000000000001 /* MedicalAssistantViewModel.swift */,
+			);
+			path = ViewModels;
+			sourceTree = "<group>";
+		};
+		FA0000340000000000000001 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				FA0000080000000000000001 /* ClaudeAPIService.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		FA0000350000000000000001 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				FA0000270000000000000001 /* Info.plist */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		FAA000020000000000000001 /* MedicalAssistant */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = FAA000030000000000000001 /* Build configuration list for PBXNativeTarget "MedicalAssistant" */;
+			buildPhases = (
+				FAA000040000000000000001 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = MedicalAssistant;
+			productName = MedicalAssistant;
+			productReference = FAA000010000000000000001 /* MedicalAssistant.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		FAA000050000000000000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1500;
+				LastUpgradeCheck = 1500;
+			};
+			buildConfigurationList = FAA000060000000000000001 /* Build configuration list for PBXProject "MedicalAssistant" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = FA0000280000000000000001;
+			productRefGroup = FA0000300000000000000001 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				FAA000020000000000000001 /* MedicalAssistant */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		FAA000040000000000000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				FA0000010000000000000001 /* MedicalAssistantApp.swift in Sources */,
+				FA0000030000000000000001 /* ContentView.swift in Sources */,
+				FA0000050000000000000001 /* MedicalModels.swift in Sources */,
+				FA0000070000000000000001 /* ClaudeAPIService.swift in Sources */,
+				FA0000090000000000000001 /* MedicalAssistantViewModel.swift in Sources */,
+				FA0000110000000000000001 /* UploadView.swift in Sources */,
+				FA0000130000000000000001 /* SymptomsView.swift in Sources */,
+				FA0000150000000000000001 /* CausesView.swift in Sources */,
+				FA0000170000000000000001 /* SolutionsView.swift in Sources */,
+				FA0000190000000000000001 /* SettingsView.swift in Sources */,
+				FA0000210000000000000001 /* DebugView.swift in Sources */,
+				FA0000230000000000000001 /* ChatView.swift in Sources */,
+				FA0000250000000000000001 /* APIKeyInputView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		FAA000070000000000000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = MedicalAssistant/Resources/Info.plist;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.medical.assistant;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		FAA000080000000000000001 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = MedicalAssistant/Resources/Info.plist;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.medical.assistant;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		FAA000030000000000000001 /* Build configuration list for PBXNativeTarget "MedicalAssistant" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				FAA000070000000000000001 /* Debug */,
+				FAA000080000000000000001 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		FAA000060000000000000001 /* Build configuration list for PBXProject "MedicalAssistant" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				FAA000070000000000000001 /* Debug */,
+				FAA000080000000000000001 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = FAA000050000000000000001 /* Project object */;
+}
