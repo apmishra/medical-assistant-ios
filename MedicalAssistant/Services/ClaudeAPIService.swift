@@ -35,22 +35,18 @@ I never give vague answers. If the question is broad, I break it into parts. I a
         request.setValue("2023-06-01", forHTTPHeaderField: "anthropic-version")
 
         let fullPrompt = context.isEmpty ? prompt : "\(context)\n\n\(prompt)"
-        let claudeRequest = ClaudeRequest(
-            apiKey: apiKey,
+
+        // Create request body without apiKey
+        let requestBody = ClaudeAPIRequestBody(
             model: "claude-sonnet-4-20250514",
             maxTokens: 4096,
             system: systemPrompt,
             messages: [ClaudeMessage(role: "user", content: fullPrompt)]
         )
 
-        // Create encoder without apiKey in body
         let encoder = JSONEncoder()
-        let bodyData = try encoder.encode([
-            "model": claudeRequest.model,
-            "max_tokens": claudeRequest.maxTokens,
-            "system": claudeRequest.system,
-            "messages": claudeRequest.messages
-        ] as [String: Any])
+        encoder.keyEncodingStrategy = .convertToSnakeCase
+        let bodyData = try encoder.encode(requestBody)
 
         request.httpBody = bodyData
 
@@ -148,22 +144,17 @@ I never give vague answers. If the question is broad, I break it into parts. I a
     }
 }
 
-// Helper to encode mixed types
-extension JSONEncoder {
-    func encode<T: Encodable>(_ value: [String: Any]) throws -> Data {
-        let wrappedDict = value.mapValues { AnyEncodable($0) }
-        return try encode(wrappedDict)
-    }
-}
+// MARK: - API Request Body
+struct ClaudeAPIRequestBody: Codable {
+    let model: String
+    let maxTokens: Int
+    let system: String
+    let messages: [ClaudeMessage]
 
-struct AnyEncodable: Encodable {
-    private let encodable: Encodable
-
-    init(_ encodable: Encodable) {
-        self.encodable = encodable
-    }
-
-    func encode(to encoder: Encoder) throws {
-        try encodable.encode(to: encoder)
+    enum CodingKeys: String, CodingKey {
+        case model
+        case maxTokens = "max_tokens"
+        case system
+        case messages
     }
 }
