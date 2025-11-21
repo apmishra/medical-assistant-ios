@@ -142,6 +142,22 @@ I never give vague answers. If the question is broad, I break it into parts. I a
             context: "Source: \(treatment.name)\nDescription: \(treatment.description)\nURL: \(treatment.url)"
         )
     }
+    
+    func chatAboutSymptom(apiKey: String, message: String, symptom: Symptom) async throws -> String {
+        return try await callClaude(
+            apiKey: apiKey,
+            prompt: message,
+            context: "Symptom: \(symptom.symptom)\nSeverity: \(symptom.severity.rawValue)\nSource Context: \(symptom.source)"
+        )
+    }
+    
+    func chatAboutCause(apiKey: String, message: String, cause: MedicalCause) async throws -> String {
+        return try await callClaude(
+            apiKey: apiKey,
+            prompt: message,
+            context: "Condition: \(cause.condition)\nProbability: \(cause.probability.rawValue)\nExplanation: \(cause.explanation)\nUrgency: \(cause.urgency.rawValue)"
+        )
+    }
 }
 
 // MARK: - API Request Body

@@ -25,7 +25,23 @@ struct CausesView: View {
                     if let causes = viewModel.potentialCauses {
                         VStack(spacing: 12) {
                             ForEach(causes.causes) { cause in
-                                CauseCard(cause: cause)
+                                HStack(spacing: 12) {
+                                    Button(action: {
+                                        viewModel.toggleCause(cause)
+                                    }) {
+                                        Image(systemName: viewModel.selectedCauses.contains(cause) ? "checkmark.square.fill" : "square")
+                                            .font(.title2)
+                                            .foregroundColor(viewModel.selectedCauses.contains(cause) ? .blue : .gray)
+                                    }
+                                    .buttonStyle(PlainButtonStyle())
+
+                                    Button(action: {
+                                        viewModel.startCauseChat(with: cause)
+                                    }) {
+                                        CauseCard(cause: cause)
+                                    }
+                                    .buttonStyle(PlainButtonStyle())
+                                }
                             }
                         }
                     } else {
@@ -39,7 +55,9 @@ struct CausesView: View {
                 if viewModel.potentialCauses != nil {
                     Button(action: {
                         Task {
-                            await viewModel.findSolutions()
+                            if await viewModel.findSolutions() {
+                                viewModel.selectedTab = 3 // Go to Solutions tab
+                            }
                         }
                     }) {
                         HStack {

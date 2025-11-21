@@ -39,14 +39,23 @@ struct DebugView: View {
                             .padding()
                     } else {
                         ForEach(viewModel.debugLogs) { log in
-                            HStack(alignment: .top, spacing: 8) {
-                                Text("[\(log.timestamp)]")
-                                    .font(.system(.caption, design: .monospaced))
-                                    .foregroundColor(.secondary)
+                            VStack(alignment: .leading, spacing: 4) {
+                                HStack(alignment: .top, spacing: 8) {
+                                    Text("[\(log.timestamp)]")
+                                        .font(.system(.caption, design: .monospaced))
+                                        .foregroundColor(.secondary)
 
-                                Text(log.message)
-                                    .font(.system(.caption, design: .monospaced))
-                                    .foregroundColor(logColor(for: log.type))
+                                    Text(log.message)
+                                        .font(.system(.caption, design: .monospaced))
+                                        .foregroundColor(logColor(for: log.type))
+                                }
+                                
+                                if let input = log.inputTokens, let output = log.outputTokens {
+                                    Text("Tokens: \(input) in / \(output) out")
+                                        .font(.system(.caption2, design: .monospaced))
+                                        .foregroundColor(.secondary)
+                                        .padding(.leading, 8)
+                                }
                             }
                             .padding(.horizontal)
                         }

@@ -1,0 +1,97 @@
+//
+//  SessionsView.swift
+//  MedicalAssistant
+//
+//  Created by Claude
+//
+
+import SwiftUI
+
+struct SessionsView: View {
+    @EnvironmentObject var viewModel: MedicalAssistantViewModel
+    @State private var searchText = ""
+    @State private var sessionToRename: MedicalSession?
+    @State private var newName = ""
+
+    var filteredSessions: [MedicalSession] {
+        if searchText.isEmpty {
+            return viewModel.sessions
+        } else {
+            return viewModel.sessions.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
+        }
+    }
+
+    var body: some View {
+        List {
+            ForEach(filteredSessions) { session in
+                Button(action: {
+                    viewModel.loadSession(session)
+                }) {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(session.name)
+                                .font(.headline)
+                                .foregroundColor(.primary)
+                            
+                            Text(session.date.formatted(date: .abbreviated, time: .shortened))
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                        
+                        Spacer()
+                        
+                        if viewModel.currentSessionId == session.id {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundColor(.green)
+                        }
+                    }
+                    .padding(.vertical, 4)
+                }
+                .contextMenu {
+                    Button(action: {
+                        sessionToRename = session
+                        newName = session.name
+                    }) {
+                        Label("Rename", systemImage: "pencil")
+                    }
+                    
+                    Button(role: .destructive, action: {
+                        viewModel.deleteSession(session)
+                    }) {
+                        Label("Delete", systemImage: "trash")
+                    }
+                }
+                .swipeActions(edge: .trailing) {
+                    Button(role: .destructive) {
+                        viewModel.deleteSession(session)
+                    } label: {
+                        Label("Delete", systemImage: "trash")
+                    }
+                    
+                    Button {
+                        sessionToRename = session
+                        newName = session.name
+                    } label: {
+                        Label("Rename", systemImage: "pencil")
+                    }
+                    .tint(.orange)
+                }
+            }
+        }
+        .navigationTitle("Sessions")
+        .searchable(text: $searchText, prompt: "Search sessions")
+        .alert("Rename Session", isPresented: Binding(
+            get: { sessionToRename != nil },
+            set: { if !$0 { sessionToRename = nil } }
+        )) {
+            TextField("New Name", text: $newName)
+            Button("Cancel", role: .cancel) { sessionToRename = nil }
+            Button("Save") {
+                if let session = sessionToRename {
+                    viewModel.renameSession(session, newName: newName)
+                }
+                sessionToRename = nil
+            }
+        }
+    }
+}

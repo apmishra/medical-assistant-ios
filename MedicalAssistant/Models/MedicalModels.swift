@@ -26,7 +26,7 @@ struct Symptom: Identifiable, Codable, Hashable {
 }
 
 // MARK: - Cause
-struct MedicalCause: Identifiable, Codable {
+struct MedicalCause: Identifiable, Codable, Hashable {
     let id = UUID()
     let condition: String
     let probability: Probability
@@ -37,12 +37,36 @@ struct MedicalCause: Identifiable, Codable {
         case low
         case medium
         case high
+        
+        init(from decoder: Decoder) throws {
+            let container = try decoder.singleValueContainer()
+            let string = try container.decode(String.self).lowercased()
+            
+            if let value = Probability(rawValue: string) {
+                self = value
+            } else {
+                // Fallback or throw specific error
+                throw DecodingError.dataCorruptedError(in: container, debugDescription: "Invalid probability value: \(string)")
+            }
+        }
     }
 
     enum Urgency: String, Codable {
         case routine
         case soon
         case immediate
+        
+        init(from decoder: Decoder) throws {
+            let container = try decoder.singleValueContainer()
+            let string = try container.decode(String.self).lowercased()
+            
+            if let value = Urgency(rawValue: string) {
+                self = value
+            } else {
+                // Fallback or throw specific error
+                throw DecodingError.dataCorruptedError(in: container, debugDescription: "Invalid urgency value: \(string)")
+            }
+        }
     }
 
     enum CodingKeys: String, CodingKey {
@@ -83,26 +107,44 @@ struct SolutionsResponse: Codable {
 }
 
 // MARK: - Chat
-struct ChatMessage: Identifiable {
-    let id = UUID()
+struct ChatMessage: Identifiable, Codable {
+    let id: UUID
     let role: Role
     let content: String
     let timestamp: Date
+    
+    init(id: UUID = UUID(), role: Role, content: String, timestamp: Date) {
+        self.id = id
+        self.role = role
+        self.content = content
+        self.timestamp = timestamp
+    }
 
-    enum Role {
+    enum Role: String, Codable {
         case user
         case assistant
     }
 }
 
 // MARK: - Debug Log
-struct DebugLog: Identifiable {
-    let id = UUID()
+struct DebugLog: Identifiable, Codable {
+    let id: UUID
     let timestamp: String
     let message: String
     let type: LogType
+    let inputTokens: Int?
+    let outputTokens: Int?
+    
+    init(id: UUID = UUID(), timestamp: String, message: String, type: LogType, inputTokens: Int? = nil, outputTokens: Int? = nil) {
+        self.id = id
+        self.timestamp = timestamp
+        self.message = message
+        self.type = type
+        self.inputTokens = inputTokens
+        self.outputTokens = outputTokens
+    }
 
-    enum LogType {
+    enum LogType: String, Codable {
         case info
         case success
         case warning
@@ -155,5 +197,40 @@ struct ClaudeErrorResponse: Codable {
     struct ErrorDetail: Codable {
         let message: String
         let type: String
+    }
+}
+
+// MARK: - Session Management
+struct MedicalSession: Identifiable, Codable {
+    let id: UUID
+    var name: String
+    let date: Date
+    
+    // Data
+    var pdfText: String
+    var manualText: String
+    var extractedSymptoms: [Symptom]
+    var confirmedSymptoms: Set<Symptom>
+    var additionalSymptoms: String
+    var potentialCauses: CausesResponse?
+    var selectedCauses: Set<MedicalCause>
+    var solutions: SolutionsResponse?
+    var chatMessages: [String: [ChatMessage]]
+    var debugLogs: [DebugLog]
+    
+    init(id: UUID = UUID(), name: String = "New Session", date: Date = Date()) {
+        self.id = id
+        self.name = name
+        self.date = date
+        self.pdfText = ""
+        self.manualText = ""
+        self.extractedSymptoms = []
+        self.confirmedSymptoms = []
+        self.additionalSymptoms = ""
+        self.potentialCauses = nil
+        self.selectedCauses = []
+        self.solutions = nil
+        self.chatMessages = [:]
+        self.debugLogs = []
     }
 }

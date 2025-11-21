@@ -15,33 +15,101 @@ struct SettingsView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 24) {
-                // API Key Section
+                // Provider Selection
                 VStack(alignment: .leading, spacing: 16) {
-                    Text("Claude API Key")
+                    Text("AI Provider")
+                        .font(.headline)
+                    
+                    Picker("Provider", selection: $viewModel.selectedProvider) {
+                        ForEach(LLMProvider.allCases, id: \.self) { provider in
+                            Text(provider.rawValue).tag(provider)
+                        }
+                    }
+                    .pickerStyle(SegmentedPickerStyle())
+                    .onChange(of: viewModel.selectedProvider) { newValue in
+                        viewModel.saveProvider(newValue)
+                        // Update temp key to match selected provider
+                        switch newValue {
+                        case .claude: tempApiKey = viewModel.apiKey
+                        case .gemini: tempApiKey = viewModel.geminiApiKey
+                        case .openai: tempApiKey = viewModel.openaiApiKey
+                        case .ollama: break // Bindings used directly
+                        }
+                    }
+                }
+                
+                Divider()
+
+                // API Key / Configuration Section
+                VStack(alignment: .leading, spacing: 16) {
+                    Text("\(viewModel.selectedProvider.rawValue) Configuration")
                         .font(.headline)
 
-                    SecureField("Enter your Claude API key", text: $tempApiKey)
-                        .textFieldStyle(RoundedBorderTextFieldStyle())
-                        .autocapitalization(.none)
-                        .disableAutocorrection(true)
-
-                    Button(action: {
-                        viewModel.saveAPIKey(tempApiKey)
-                        tempApiKey = ""
-                        showingSaved = true
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-                            showingSaved = false
+                    if viewModel.selectedProvider == .ollama {
+                        // Ollama Specific Fields
+                        VStack(alignment: .leading) {
+                            Text("Base URL")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            TextField("http://localhost:11434", text: $viewModel.ollamaBaseURL)
+                                .textFieldStyle(RoundedBorderTextFieldStyle())
+                                .autocapitalization(.none)
+                                .disableAutocorrection(true)
                         }
-                    }) {
-                        Text("Update")
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color.blue)
-                            .foregroundColor(.white)
-                            .cornerRadius(8)
+                        
+                        VStack(alignment: .leading) {
+                            Text("Model Name")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            TextField("llama3", text: $viewModel.ollamaModel)
+                                .textFieldStyle(RoundedBorderTextFieldStyle())
+                                .autocapitalization(.none)
+                                .disableAutocorrection(true)
+                        }
+                        
+                        Button(action: {
+                            viewModel.saveOllamaConfig(url: viewModel.ollamaBaseURL, model: viewModel.ollamaModel)
+                            showingSaved = true
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                                showingSaved = false
+                            }
+                        }) {
+                            Text("Update Configuration")
+                                .frame(maxWidth: .infinity)
+                                .padding()
+                                .background(Color.blue)
+                                .foregroundColor(.white)
+                                .cornerRadius(8)
+                        }
+                    } else {
+                        // Standard API Key Field
+                        SecureField("Enter \(viewModel.selectedProvider.rawValue) API key", text: $tempApiKey)
+                            .textFieldStyle(RoundedBorderTextFieldStyle())
+                            .autocapitalization(.none)
+                            .disableAutocorrection(true)
+
+                        Button(action: {
+                            switch viewModel.selectedProvider {
+                            case .claude: viewModel.saveAPIKey(tempApiKey)
+                            case .gemini: viewModel.saveGeminiAPIKey(tempApiKey)
+                            case .openai: viewModel.saveOpenAIAPIKey(tempApiKey)
+                            case .ollama: break // Handled above
+                            }
+                            showingSaved = true
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                                showingSaved = false
+                            }
+                        }) {
+                            Text("Update Key")
+                                .frame(maxWidth: .infinity)
+                                .padding()
+                                .background(Color.blue)
+                                .foregroundColor(.white)
+                                .cornerRadius(8)
+                        }
                     }
 
-                    Text("Your API key is stored locally on your device and sent directly to Anthropic's API.")
+                    Text(viewModel.selectedProvider == .ollama ? "Configuration is stored locally." : "Your API key is stored locally on your device.")
                         .font(.caption)
                         .foregroundColor(.secondary)
 
@@ -49,10 +117,19 @@ struct SettingsView: View {
                         HStack {
                             Image(systemName: "checkmark.circle.fill")
                                 .foregroundColor(.green)
-                            Text("API Key saved successfully!")
+                            Text("Saved successfully!")
                                 .foregroundColor(.green)
                         }
                         .font(.caption)
+                    }
+                }
+                .onAppear {
+                    // Initialize temp key
+                    switch viewModel.selectedProvider {
+                    case .claude: tempApiKey = viewModel.apiKey
+                    case .gemini: tempApiKey = viewModel.geminiApiKey
+                    case .openai: tempApiKey = viewModel.openaiApiKey
+                    case .ollama: break // Bindings used directly
                     }
                 }
 
@@ -66,8 +143,29 @@ struct SettingsView: View {
                     HStack {
                         Image(systemName: viewModel.apiKey.isEmpty ? "xmark.circle.fill" : "checkmark.circle.fill")
                             .foregroundColor(viewModel.apiKey.isEmpty ? .red : .green)
-                        Text(viewModel.apiKey.isEmpty ? "No API Key Configured" : "API Key Configured")
+                        Text(viewModel.apiKey.isEmpty ? "Claude: Not Configured" : "Claude: Configured")
                             .foregroundColor(viewModel.apiKey.isEmpty ? .red : .green)
+                    }
+                    
+                    HStack {
+                        Image(systemName: viewModel.geminiApiKey.isEmpty ? "xmark.circle.fill" : "checkmark.circle.fill")
+                            .foregroundColor(viewModel.geminiApiKey.isEmpty ? .red : .green)
+                        Text(viewModel.geminiApiKey.isEmpty ? "Gemini: Not Configured" : "Gemini: Configured")
+                            .foregroundColor(viewModel.geminiApiKey.isEmpty ? .red : .green)
+                    }
+                    
+                    HStack {
+                        Image(systemName: viewModel.openaiApiKey.isEmpty ? "xmark.circle.fill" : "checkmark.circle.fill")
+                            .foregroundColor(viewModel.openaiApiKey.isEmpty ? .red : .green)
+                        Text(viewModel.openaiApiKey.isEmpty ? "OpenAI: Not Configured" : "OpenAI: Configured")
+                            .foregroundColor(viewModel.openaiApiKey.isEmpty ? .red : .green)
+                    }
+                    
+                    HStack {
+                        Image(systemName: (viewModel.ollamaBaseURL.isEmpty || viewModel.ollamaModel.isEmpty) ? "xmark.circle.fill" : "checkmark.circle.fill")
+                            .foregroundColor((viewModel.ollamaBaseURL.isEmpty || viewModel.ollamaModel.isEmpty) ? .red : .green)
+                        Text((viewModel.ollamaBaseURL.isEmpty || viewModel.ollamaModel.isEmpty) ? "Ollama: Not Configured" : "Ollama: Configured")
+                            .foregroundColor((viewModel.ollamaBaseURL.isEmpty || viewModel.ollamaModel.isEmpty) ? .red : .green)
                     }
                 }
 

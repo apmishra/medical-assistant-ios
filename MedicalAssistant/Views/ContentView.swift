@@ -9,70 +9,120 @@ import SwiftUI
 
 struct ContentView: View {
     @EnvironmentObject var viewModel: MedicalAssistantViewModel
-    @State private var selectedTab = 0
 
     var body: some View {
-        NavigationView {
-            VStack(spacing: 0) {
-                // Tab Selection
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 0) {
-                        TabButton(title: "Upload", icon: "arrow.up.doc", isSelected: selectedTab == 0) {
-                            selectedTab = 0
+        Group {
+            if viewModel.currentSessionId == nil {
+                SplashView()
+            } else {
+                NavigationView {
+                    VStack(spacing: 0) {
+                        // Tab Selection
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 24) {
+                                TabButton(title: "Symptoms", icon: "arrow.up.doc", isSelected: viewModel.selectedTab == 0) {
+                                    viewModel.selectedTab = 0
+                                }
+                                TabButton(title: "Confirm", icon: "list.bullet.clipboard", isSelected: viewModel.selectedTab == 1) {
+                                    viewModel.selectedTab = 1
+                                }
+                                TabButton(title: "Causes", icon: "cross.case", isSelected: viewModel.selectedTab == 2) {
+                                    viewModel.selectedTab = 2
+                                }
+                                TabButton(title: "Solutions", icon: "pills.fill", isSelected: viewModel.selectedTab == 3) {
+                                    viewModel.selectedTab = 3
+                                }
+                                TabButton(title: "Settings", icon: "gearshape.fill", isSelected: viewModel.selectedTab == 5) {
+                                    viewModel.selectedTab = 5
+                                }
+                                TabButton(title: "Debug", icon: "ladybug.fill", isSelected: viewModel.selectedTab == 6) {
+                                    viewModel.selectedTab = 6
+                                }
+                            }
+                            .padding(.horizontal)
+                            .padding(.top, 8)
                         }
-                        TabButton(title: "Symptoms", icon: "list.bullet.clipboard", isSelected: selectedTab == 1) {
-                            selectedTab = 1
+                        
+                        Divider()
+                            .padding(.top, 8)
+                        
+                        // Content Area
+                        ZStack {
+                            switch viewModel.selectedTab {
+                            case 0: UploadView()
+                            case 1: SymptomsView()
+                            case 2: CausesView()
+                            case 3: SolutionsView()
+                            case 4: SessionsView()
+                            case 5: SettingsView()
+                            case 6: DebugView()
+                            default: UploadView()
+                            }
                         }
-                        TabButton(title: "Causes", icon: "cross.case", isSelected: selectedTab == 2) {
-                            selectedTab = 2
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    }
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .navigationBarLeading) {
+                            Text(currentTabTitle)
+                                .font(.title2)
+                                .bold()
+                                .fixedSize()
                         }
-                        TabButton(title: "Solutions", icon: "heart.text.square", isSelected: selectedTab == 3) {
-                            selectedTab = 3
-                        }
-                        TabButton(title: "Settings", icon: "gear", isSelected: selectedTab == 4) {
-                            selectedTab = 4
-                        }
-                        TabButton(title: "Debug", icon: "ladybug", isSelected: selectedTab == 5) {
-                            selectedTab = 5
+                        
+                        ToolbarItem(placement: .navigationBarTrailing) {
+                            HStack(spacing: 16) {
+                                Button(action: {
+                                    viewModel.selectedTab = 4
+                                }) {
+                                    Image(systemName: "clock.arrow.circlepath")
+                                        .font(.headline)
+                                }
+                                
+                                Button(action: {
+                                    viewModel.createNewSession()
+                                }) {
+                                    Image(systemName: "plus.circle")
+                                        .font(.headline)
+                                }
+                            }
                         }
                     }
-                    .padding(.horizontal)
                 }
-                .frame(height: 50)
-                .background(Color(.systemBackground))
-
-                Divider()
-
-                // Tab Content
-                TabView(selection: $selectedTab) {
-                    UploadView()
-                        .tag(0)
-                    SymptomsView()
-                        .tag(1)
-                    CausesView()
-                        .tag(2)
-                    SolutionsView()
-                        .tag(3)
-                    SettingsView()
-                        .tag(4)
-                    DebugView()
-                        .tag(5)
-                }
-                .tabViewStyle(.page(indexDisplayMode: .never))
             }
-            .navigationTitle("Medical Assistant")
-            .navigationBarTitleDisplayMode(.large)
         }
         .sheet(isPresented: $viewModel.showApiKeyInput) {
             APIKeyInputView()
         }
         .sheet(item: $viewModel.activeChatTreatment) { treatment in
             ChatView(treatment: treatment)
+                .environmentObject(viewModel)
+        }
+        .sheet(item: $viewModel.activeChatSymptom) { symptom in
+            SymptomChatView(symptom: symptom)
+                .environmentObject(viewModel)
+        }
+        .sheet(item: $viewModel.activeChatCause) { cause in
+            CauseChatView(cause: cause)
+                .environmentObject(viewModel)
         }
         .overlay {
             if viewModel.isLoading {
                 LoadingOverlay()
             }
+        }
+    }
+
+    var currentTabTitle: String {
+        switch viewModel.selectedTab {
+        case 0: return "Symptoms"
+        case 1: return "Confirm"
+        case 2: return "Causes"
+        case 3: return "Solutions"
+        case 4: return "Sessions"
+        case 5: return "Settings"
+        case 6: return "Debug"
+        default: return ""
         }
     }
 }
@@ -90,8 +140,9 @@ struct TabButton: View {
                     .font(.system(size: 18))
                 Text(title)
                     .font(.caption)
+                    .fixedSize()
             }
-            .frame(maxWidth: .infinity)
+            .padding(.horizontal, 4)
             .padding(.vertical, 8)
             .foregroundColor(isSelected ? .blue : .gray)
             .overlay(

@@ -15,55 +15,7 @@ struct UploadView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 24) {
-                // Upload Section
-                VStack(alignment: .leading, spacing: 16) {
-                    Text("Upload Medical Document")
-                        .font(.title2)
-                        .bold()
-
-                    Button(action: {
-                        showingFilePicker = true
-                    }) {
-                        VStack(spacing: 16) {
-                            Image(systemName: "arrow.up.doc.fill")
-                                .font(.system(size: 48))
-                                .foregroundColor(.gray)
-
-                            Text("Upload a PDF of your medical report")
-                                .foregroundColor(.secondary)
-
-                            Text("Choose PDF File")
-                                .font(.headline)
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 24)
-                                .padding(.vertical, 12)
-                                .background(Color.blue)
-                                .cornerRadius(8)
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding(32)
-                        .background(
-                            RoundedRectangle(cornerRadius: 12)
-                                .strokeBorder(style: StrokeStyle(lineWidth: 2, dash: [10]))
-                                .foregroundColor(.gray.opacity(0.5))
-                        )
-                    }
-                }
-
-                // Divider
-                HStack {
-                    Rectangle()
-                        .frame(height: 1)
-                        .foregroundColor(.gray.opacity(0.3))
-                    Text("OR")
-                        .foregroundColor(.secondary)
-                        .padding(.horizontal, 8)
-                    Rectangle()
-                        .frame(height: 1)
-                        .foregroundColor(.gray.opacity(0.3))
-                }
-
-                // Manual Text Entry
+                // Manual Text Entry (Now First)
                 VStack(alignment: .leading, spacing: 16) {
                     Text("Paste Medical Text")
                         .font(.title2)
@@ -91,30 +43,78 @@ struct UploadView: View {
                             alignment: .topLeading
                         )
                 }
-
+                
                 // Analyze Button
-                if viewModel.medicalDataAvailable {
-                    Button(action: {
-                        Task {
-                            await viewModel.analyzeSymptoms()
+                Button(action: {
+                    Task {
+                        if await viewModel.analyzeSymptoms() {
+                            viewModel.selectedTab = 1 // Go to Symptoms tab
                         }
-                    }) {
-                        HStack {
-                            if viewModel.isLoading {
-                                ProgressView()
-                                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                                Text("Analyzing...")
-                            } else {
-                                Text("Analyze Medical Data")
-                            }
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(viewModel.isLoading ? Color.gray : Color.blue)
-                        .foregroundColor(.white)
-                        .cornerRadius(8)
                     }
-                    .disabled(viewModel.isLoading)
+                }) {
+                    HStack {
+                        if viewModel.isLoading {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                            Text("Analyzing...")
+                        } else {
+                            Text("Analyze Medical Data")
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(viewModel.isLoading ? Color.gray : Color.blue)
+                    .foregroundColor(.white)
+                    .cornerRadius(8)
+                }
+                .disabled(viewModel.isLoading || viewModel.manualText.isEmpty)
+
+                // Divider
+                HStack {
+                    Rectangle()
+                        .frame(height: 1)
+                        .foregroundColor(.gray.opacity(0.3))
+                    Text("OR")
+                        .foregroundColor(.secondary)
+                        .padding(.horizontal, 8)
+                    Rectangle()
+                        .frame(height: 1)
+                        .foregroundColor(.gray.opacity(0.3))
+                }
+
+                // Upload Section (Now Second and Compact)
+                VStack(alignment: .leading, spacing: 16) {
+                    Text("Upload Medical Document")
+                        .font(.title3) // Smaller font
+                        .bold()
+
+                    Button(action: {
+                        showingFilePicker = true
+                    }) {
+                        HStack(spacing: 16) {
+                            Image(systemName: "arrow.up.doc.fill")
+                                .font(.system(size: 24)) // Smaller icon
+                                .foregroundColor(.blue)
+
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Upload PDF Report")
+                                    .font(.headline)
+                                    .foregroundColor(.primary)
+                                
+                                Text("Tap to select file")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                            
+                            Spacer()
+                            
+                            Image(systemName: "chevron.right")
+                                .foregroundColor(.gray)
+                        }
+                        .padding(16)
+                        .background(Color(.systemGray6))
+                        .cornerRadius(12)
+                    }
                 }
             }
             .padding()
@@ -139,7 +139,9 @@ struct UploadView: View {
                 do {
                     let data = try Data(contentsOf: url)
                     Task {
-                        await viewModel.handlePDFUpload(data: data)
+                        if await viewModel.handlePDFUpload(data: data) {
+                            viewModel.selectedTab = 1 // Go to Symptoms tab
+                        }
                     }
                 } catch {
                     viewModel.addDebugLog("Failed to read PDF: \(error.localizedDescription)", type: .error)

@@ -31,6 +31,9 @@ struct SymptomsView: View {
                                     isSelected: viewModel.confirmedSymptoms.contains(symptom),
                                     action: {
                                         viewModel.toggleSymptom(symptom)
+                                    },
+                                    chatAction: {
+                                        viewModel.startSymptomChat(with: symptom)
                                     }
                                 )
                             }
@@ -70,7 +73,9 @@ struct SymptomsView: View {
                 // Analyze Button
                 Button(action: {
                     Task {
-                        await viewModel.analyzeCauses()
+                        if await viewModel.analyzeCauses() {
+                            viewModel.selectedTab = 2 // Go to Causes tab
+                        }
                     }
                 }) {
                     HStack {
@@ -101,38 +106,49 @@ struct SymptomCard: View {
     let symptom: Symptom
     let isSelected: Bool
     let action: () -> Void
+    let chatAction: () -> Void
 
     var body: some View {
-        Button(action: action) {
-            HStack(alignment: .top, spacing: 12) {
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack {
-                        Text(symptom.symptom)
-                            .font(.headline)
-                            .foregroundColor(.primary)
+        HStack(alignment: .top, spacing: 12) {
+            Button(action: action) {
+                HStack(alignment: .top, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            Text(symptom.symptom)
+                                .font(.headline)
+                                .foregroundColor(.primary)
 
-                        SeverityBadge(severity: symptom.severity)
+                            SeverityBadge(severity: symptom.severity)
+                        }
+
+                        Text("Source: \(symptom.source)")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
                     }
 
-                    Text("Source: \(symptom.source)")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                    Spacer()
+
+                    Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                        .font(.title2)
+                        .foregroundColor(isSelected ? .green : .gray)
                 }
-
-                Spacer()
-
-                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                    .font(.title2)
-                    .foregroundColor(isSelected ? .green : .gray)
             }
-            .padding()
-            .background(isSelected ? Color.green.opacity(0.1) : Color(.systemGray6))
-            .cornerRadius(12)
-            .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(isSelected ? Color.green : Color.clear, lineWidth: 2)
-            )
+            .buttonStyle(PlainButtonStyle()) // Important to allow nested buttons if needed, though here we are separating them
+
+            // Chat Button
+            Button(action: chatAction) {
+                Image(systemName: "message.circle.fill")
+                    .font(.title2)
+                    .foregroundColor(.blue)
+            }
         }
+        .padding()
+        .background(isSelected ? Color.green.opacity(0.1) : Color(.systemGray6))
+        .cornerRadius(12)
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(isSelected ? Color.green : Color.clear, lineWidth: 2)
+        )
     }
 }
 
