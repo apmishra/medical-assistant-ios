@@ -21,11 +21,11 @@ struct SplashView: View {
                 .frame(width: 100, height: 100)
                 .foregroundColor(.blue)
 
-            Text("Medical Assistant")
+            Text("AI Opinion")
                 .font(.largeTitle)
                 .bold()
 
-            Text("AI-Powered Medical Analysis")
+            Text("General Findings")
                 .font(.title3)
                 .foregroundColor(.secondary)
 
@@ -68,6 +68,13 @@ struct SplashView: View {
             Spacer()
         }
         .padding()
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(
+            Rectangle()
+                .fill(.ultraThinMaterial)
+                .opacity(0.85) // Adjust opacity to make it more translucent
+        )
+        .ignoresSafeArea()
         .sheet(isPresented: $showSessions) {
             NavigationView {
                 SessionsView()

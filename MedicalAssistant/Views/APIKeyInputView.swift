@@ -42,6 +42,7 @@ struct APIKeyInputView: View {
                     case .gemini: apiKeyInput = viewModel.geminiApiKey
                     case .openai: apiKeyInput = viewModel.openaiApiKey
                     case .ollama: break
+                    case .appleIntelligence: break
                     }
                 }
 
@@ -63,6 +64,22 @@ struct APIKeyInputView: View {
                             .textFieldStyle(RoundedBorderTextFieldStyle())
                             .autocapitalization(.none)
                             .disableAutocorrection(true)
+                    } else if selectedProvider == .appleIntelligence {
+                        VStack(spacing: 12) {
+                            Image(systemName: "applelogo")
+                                .font(.largeTitle)
+                                .foregroundColor(.primary)
+                            Text("Apple Intelligence")
+                                .font(.headline)
+                            Text("Uses on-device Foundation Models. No API key required.")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                                .multilineTextAlignment(.center)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color(.systemGray6))
+                        .cornerRadius(8)
                     } else {
                         Text("\(selectedProvider.rawValue) API Key")
                             .font(.caption)
@@ -82,17 +99,18 @@ struct APIKeyInputView: View {
                     case .gemini: viewModel.saveGeminiAPIKey(apiKeyInput)
                     case .openai: viewModel.saveOpenAIAPIKey(apiKeyInput)
                     case .ollama: viewModel.saveOllamaConfig(url: viewModel.ollamaBaseURL, model: viewModel.ollamaModel)
+                    case .appleIntelligence: break
                     }
                     dismiss()
                 }) {
                     Text("Save & Continue")
                         .frame(maxWidth: .infinity)
                         .padding()
-                        .background((selectedProvider != .ollama && apiKeyInput.isEmpty) ? Color.gray : Color.blue)
+                        .background((selectedProvider != .ollama && selectedProvider != .appleIntelligence && apiKeyInput.isEmpty) ? Color.gray : Color.blue)
                         .foregroundColor(.white)
                         .cornerRadius(8)
                 }
-                .disabled(selectedProvider != .ollama && apiKeyInput.isEmpty)
+                .disabled(selectedProvider != .ollama && selectedProvider != .appleIntelligence && apiKeyInput.isEmpty)
                 .padding(.horizontal)
 
                 Spacer()
@@ -107,6 +125,7 @@ struct APIKeyInputView: View {
                 case .gemini: apiKeyInput = viewModel.geminiApiKey
                 case .openai: apiKeyInput = viewModel.openaiApiKey
                 case .ollama: break // Bindings used directly
+                case .appleIntelligence: break
                 }
             }
         }

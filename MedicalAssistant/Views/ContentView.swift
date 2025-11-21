@@ -12,9 +12,8 @@ struct ContentView: View {
 
     var body: some View {
         Group {
-            if viewModel.currentSessionId == nil {
-                SplashView()
-            } else {
+            ZStack {
+                // Main App Content (Always rendered, but maybe hidden/disabled if no session)
                 NavigationView {
                     VStack(spacing: 0) {
                         // Tab Selection
@@ -88,6 +87,14 @@ struct ContentView: View {
                             }
                         }
                     }
+                }
+                .disabled(viewModel.currentSessionId == nil) // Disable interaction when splash is shown
+                
+                // Splash Overlay
+                if viewModel.currentSessionId == nil {
+                    SplashView()
+                        .transition(.opacity)
+                        .zIndex(1)
                 }
             }
         }

@@ -34,6 +34,7 @@ struct SettingsView: View {
                         case .gemini: tempApiKey = viewModel.geminiApiKey
                         case .openai: tempApiKey = viewModel.openaiApiKey
                         case .ollama: break // Bindings used directly
+                        case .appleIntelligence: break
                         }
                     }
                 }
@@ -81,6 +82,22 @@ struct SettingsView: View {
                                 .foregroundColor(.white)
                                 .cornerRadius(8)
                         }
+                    } else if viewModel.selectedProvider == .appleIntelligence {
+                        VStack(spacing: 12) {
+                            Image(systemName: "applelogo")
+                                .font(.largeTitle)
+                                .foregroundColor(.primary)
+                            Text("Apple Intelligence")
+                                .font(.headline)
+                            Text("Uses on-device Foundation Models. No API key required.")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                                .multilineTextAlignment(.center)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color(.systemGray6))
+                        .cornerRadius(8)
                     } else {
                         // Standard API Key Field
                         SecureField("Enter \(viewModel.selectedProvider.rawValue) API key", text: $tempApiKey)
@@ -94,6 +111,7 @@ struct SettingsView: View {
                             case .gemini: viewModel.saveGeminiAPIKey(tempApiKey)
                             case .openai: viewModel.saveOpenAIAPIKey(tempApiKey)
                             case .ollama: break // Handled above
+                            case .appleIntelligence: break
                             }
                             showingSaved = true
                             DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
@@ -130,6 +148,7 @@ struct SettingsView: View {
                     case .gemini: tempApiKey = viewModel.geminiApiKey
                     case .openai: tempApiKey = viewModel.openaiApiKey
                     case .ollama: break // Bindings used directly
+                    case .appleIntelligence: break
                     }
                 }
 
@@ -167,6 +186,13 @@ struct SettingsView: View {
                         Text((viewModel.ollamaBaseURL.isEmpty || viewModel.ollamaModel.isEmpty) ? "Ollama: Not Configured" : "Ollama: Configured")
                             .foregroundColor((viewModel.ollamaBaseURL.isEmpty || viewModel.ollamaModel.isEmpty) ? .red : .green)
                     }
+                    
+                    HStack {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundColor(.green)
+                        Text("Apple Intelligence: Ready")
+                            .foregroundColor(.green)
+                    }
                 }
 
                 Divider()
@@ -176,7 +202,7 @@ struct SettingsView: View {
                     Text("About This Application")
                         .font(.headline)
 
-                    Text("This medical assistant application helps analyze medical documents and provides information about potential symptoms, causes, and treatment options.")
+                    Text("This Barbarik application helps analyze medical documents and provides information about potential symptoms, causes, and treatment options.")
                         .font(.body)
                         .foregroundColor(.secondary)
 

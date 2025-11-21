@@ -15,6 +15,7 @@
 		311436422ED025DB00133BEC /* SplashView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 311436412ED025DB00133BEC /* SplashView.swift */; };
 		311436432ED025DB00133BEC /* SessionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 311436402ED025DB00133BEC /* SessionsView.swift */; };
 		311436452ED02F3200133BEC /* OllamaAPIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 311436442ED02F3200133BEC /* OllamaAPIService.swift */; };
+		311436492ED0E9DA00133BEC /* AppleIntelligenceService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 311436482ED0E9DA00133BEC /* AppleIntelligenceService.swift */; };
 		FA0000010000000000000001 /* MedicalAssistantApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000020000000000000001 /* MedicalAssistantApp.swift */; };
 		FA0000030000000000000001 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000040000000000000001 /* ContentView.swift */; };
 		FA0000050000000000000001 /* MedicalModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000060000000000000001 /* MedicalModels.swift */; };
@@ -28,6 +29,7 @@
 		FA0000210000000000000001 /* DebugView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000220000000000000001 /* DebugView.swift */; };
 		FA0000230000000000000001 /* ChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000240000000000000001 /* ChatView.swift */; };
 		FA0000250000000000000001 /* APIKeyInputView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000260000000000000001 /* APIKeyInputView.swift */; };
+		FA0000360000000000000001 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 311436462ED051C300133BEC /* Assets.xcassets */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -39,6 +41,8 @@
 		311436402ED025DB00133BEC /* SessionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionsView.swift; sourceTree = "<group>"; };
 		311436412ED025DB00133BEC /* SplashView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplashView.swift; sourceTree = "<group>"; };
 		311436442ED02F3200133BEC /* OllamaAPIService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OllamaAPIService.swift; sourceTree = "<group>"; };
+		311436462ED051C300133BEC /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		311436482ED0E9DA00133BEC /* AppleIntelligenceService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleIntelligenceService.swift; sourceTree = "<group>"; };
 		FA0000020000000000000001 /* MedicalAssistantApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MedicalAssistantApp.swift; sourceTree = "<group>"; };
 		FA0000040000000000000001 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		FA0000060000000000000001 /* MedicalModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MedicalModels.swift; sourceTree = "<group>"; };
@@ -68,6 +72,7 @@
 		FA0000290000000000000001 /* MedicalAssistant */ = {
 			isa = PBXGroup;
 			children = (
+				311436462ED051C300133BEC /* Assets.xcassets */,
 				FA0000020000000000000001 /* MedicalAssistantApp.swift */,
 				FA0000310000000000000001 /* Models */,
 				FA0000320000000000000001 /* Views */,
@@ -125,6 +130,7 @@
 		FA0000340000000000000001 /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				311436482ED0E9DA00133BEC /* AppleIntelligenceService.swift */,
 				311436442ED02F3200133BEC /* OllamaAPIService.swift */,
 				3114363A2ED01FCD00133BEC /* GeminiAPIService.swift */,
 				311436362ED0164200133BEC /* GeminiAPIService.swift */,
@@ -150,6 +156,7 @@
 			buildConfigurationList = FAA000030000000000000001 /* Build configuration list for PBXNativeTarget "MedicalAssistant" */;
 			buildPhases = (
 				FAA000040000000000000001 /* Sources */,
+				FAA000090000000000000001 /* Resources */,
 			);
 			buildRules = (
 			);
@@ -188,6 +195,17 @@
 		};
 /* End PBXProject section */
 
+/* Begin PBXResourcesBuildPhase section */
+		FAA000090000000000000001 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				FA0000360000000000000001 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
 		FAA000040000000000000001 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
@@ -204,6 +222,7 @@
 				FA0000130000000000000001 /* SymptomsView.swift in Sources */,
 				311436382ED0164200133BEC /* GeminiAPIService.swift in Sources */,
 				311436452ED02F3200133BEC /* OllamaAPIService.swift in Sources */,
+				311436492ED0E9DA00133BEC /* AppleIntelligenceService.swift in Sources */,
 				3114363F2ED021D000133BEC /* CauseChatView.swift in Sources */,
 				311436392ED0164200133BEC /* OpenAIAPIService.swift in Sources */,
 				FA0000150000000000000001 /* CausesView.swift in Sources */,
@@ -226,6 +245,7 @@
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
 				CLANG_ENABLE_MODULES = YES;
@@ -295,6 +315,7 @@
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
 				CLANG_ENABLE_MODULES = YES;

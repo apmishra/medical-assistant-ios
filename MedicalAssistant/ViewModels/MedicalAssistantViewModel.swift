@@ -13,7 +13,10 @@ enum LLMProvider: String, CaseIterable, Codable {
     case gemini = "Gemini"
     case openai = "OpenAI"
     case ollama = "Ollama"
+    case appleIntelligence = "Apple Intelligence"
 }
+
+
 
 @MainActor
 class MedicalAssistantViewModel: ObservableObject {
@@ -50,6 +53,7 @@ class MedicalAssistantViewModel: ObservableObject {
     private let geminiService = GeminiAPIService.shared
     private let openaiService = OpenAIAPIService.shared
     private let ollamaService = OllamaAPIService.shared
+    private let appleIntelligenceService = AppleIntelligenceService.shared
     
     private let providerStorageKey = "selected_provider"
     private let apiKeyStorageKey = "claude_api_key"
@@ -101,6 +105,7 @@ class MedicalAssistantViewModel: ObservableObject {
         case .gemini: hasKey = !geminiApiKey.isEmpty
         case .openai: hasKey = !openaiApiKey.isEmpty
         case .ollama: hasKey = !ollamaBaseURL.isEmpty && !ollamaModel.isEmpty
+        case .appleIntelligence: hasKey = true
         }
         
         if !hasKey {
@@ -181,6 +186,8 @@ class MedicalAssistantViewModel: ObservableObject {
                 text = try await openaiService.extractTextFromPDF(apiKey: openaiApiKey, pdfData: data)
             case .ollama:
                 text = try await ollamaService.extractTextFromPDF(pdfData: data)
+            case .appleIntelligence:
+                text = try await appleIntelligenceService.extractTextFromPDF(pdfData: data)
             }
             pdfText = text
             addDebugLog("Text extracted from PDF using \(selectedProvider.rawValue)", type: .success)
@@ -216,6 +223,8 @@ class MedicalAssistantViewModel: ObservableObject {
                 symptoms = try await openaiService.analyzeSymptoms(apiKey: openaiApiKey, medicalData: medicalData)
             case .ollama:
                 symptoms = try await ollamaService.analyzeSymptoms(baseURL: ollamaBaseURL, model: ollamaModel, medicalData: medicalData)
+            case .appleIntelligence:
+                symptoms = try await appleIntelligenceService.analyzeSymptoms(medicalData: medicalData)
             }
             extractedSymptoms = symptoms
             addDebugLog("Extracted \(symptoms.count) symptoms using \(selectedProvider.rawValue)", type: .success)
@@ -265,6 +274,8 @@ class MedicalAssistantViewModel: ObservableObject {
                 causes = try await openaiService.analyzeCauses(apiKey: openaiApiKey, symptoms: allSymptoms)
             case .ollama:
                 causes = try await ollamaService.analyzeCauses(baseURL: ollamaBaseURL, model: ollamaModel, symptoms: allSymptoms)
+            case .appleIntelligence:
+                causes = try await appleIntelligenceService.analyzeCauses(symptoms: allSymptoms)
             }
             potentialCauses = causes
             addDebugLog("Identified \(causes.causes.count) potential causes using \(selectedProvider.rawValue)", type: .success)
@@ -303,6 +314,8 @@ class MedicalAssistantViewModel: ObservableObject {
                 solutions = try await openaiService.findSolutions(apiKey: openaiApiKey, conditions: conditions)
             case .ollama:
                 solutions = try await ollamaService.findSolutions(baseURL: ollamaBaseURL, model: ollamaModel, conditions: conditions)
+            case .appleIntelligence:
+                solutions = try await appleIntelligenceService.findSolutions(conditions: conditions)
             }
             self.solutions = solutions
             addDebugLog("Found solutions using \(selectedProvider.rawValue)", type: .success)
@@ -342,6 +355,8 @@ class MedicalAssistantViewModel: ObservableObject {
                 response = try await openaiService.chatWithSource(apiKey: openaiApiKey, message: message, treatment: treatment)
             case .ollama:
                 response = try await ollamaService.chatWithSource(baseURL: ollamaBaseURL, model: ollamaModel, message: message, treatment: treatment)
+            case .appleIntelligence:
+                response = try await appleIntelligenceService.chatWithSource(message: message, treatment: treatment)
             }
             
             let assistantMessage = ChatMessage(role: .assistant, content: response, timestamp: Date())
@@ -385,6 +400,8 @@ class MedicalAssistantViewModel: ObservableObject {
                 response = try await openaiService.chatAboutSymptom(apiKey: openaiApiKey, message: message, symptom: symptom)
             case .ollama:
                 response = try await ollamaService.chatAboutSymptom(baseURL: ollamaBaseURL, model: ollamaModel, message: message, symptom: symptom)
+            case .appleIntelligence:
+                response = try await appleIntelligenceService.chatAboutSymptom(message: message, symptom: symptom)
             }
             
             let assistantMessage = ChatMessage(role: .assistant, content: response, timestamp: Date())
@@ -427,6 +444,8 @@ class MedicalAssistantViewModel: ObservableObject {
                 response = try await openaiService.chatAboutCause(apiKey: openaiApiKey, message: message, cause: cause)
             case .ollama:
                 response = try await ollamaService.chatAboutCause(baseURL: ollamaBaseURL, model: ollamaModel, message: message, cause: cause)
+            case .appleIntelligence:
+                response = try await appleIntelligenceService.chatAboutCause(message: message, cause: cause)
             }
             
             let assistantMessage = ChatMessage(role: .assistant, content: response, timestamp: Date())
