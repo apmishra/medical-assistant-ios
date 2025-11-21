@@ -167,7 +167,37 @@ class OllamaAPIService {
         }
         
         do {
-            return try JSONDecoder().decode(CausesResponse.self, from: data)
+            // Robust decoding: Use strings for enums to handle case/format variations
+            struct RawCausesResponse: Codable {
+                let causes: [RawCause]
+            }
+            
+            struct RawCause: Codable {
+                let condition: String
+                let probability: String
+                let explanation: String
+                let urgency: String? // Optional in case model misses it
+            }
+            
+            let rawResponse = try JSONDecoder().decode(RawCausesResponse.self, from: data)
+            
+            let validCauses = rawResponse.causes.map { raw -> MedicalCause in
+                let probString = raw.probability.lowercased()
+                let prob: MedicalCause.Probability
+                if probString.contains("high") { prob = .high }
+                else if probString.contains("medium") { prob = .medium }
+                else { prob = .low }
+                
+                let urgString = (raw.urgency ?? "routine").lowercased()
+                let urg: MedicalCause.Urgency
+                if urgString.contains("immediate") { urg = .immediate }
+                else if urgString.contains("soon") { urg = .soon }
+                else { urg = .routine }
+                
+                return MedicalCause(condition: raw.condition, probability: prob, explanation: raw.explanation, urgency: urg)
+            }
+            
+            return CausesResponse(causes: validCauses)
         } catch {
             print("Failed to parse causes. Raw response: \(cleanResponse)")
             throw NSError(domain: "OllamaAPIService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to parse causes. Raw output: \(cleanResponse)"])
@@ -178,7 +208,7 @@ class OllamaAPIService {
         let systemPrompt = """
         You are a medical AI assistant. For the provided medical conditions, suggest treatments and management strategies.
         Return ONLY a JSON object with a "solutions" key containing an array of objects. Each object should have:
-        - "category": Category name (e.g., Ayurvedic, Homeopathic, Allopathic, Naturopathic)
+        - "category": Category name (e.g., Common Sense, Allopathic, Ayurvedic, Naturopathic, Homeopathic, Unani)
         - "treatments": Array of treatment objects, each containing:
             - "name": Name of the treatment
             - "description": How it works

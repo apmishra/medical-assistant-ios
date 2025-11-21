@@ -121,7 +121,7 @@ I never give vague answers. If the question is broad, I break it into parts. I a
         let conditionsText = conditions.joined(separator: ", ")
         let response = try await callClaude(
             apiKey: apiKey,
-            prompt: "For these conditions, provide treatment approaches in Ayurvedic, Homeopathic, Allopathic, and Naturopathic medicine. Include reputable sources. Format as JSON: {\"solutions\": [{\"category\": \"Ayurvedic|Homeopathic|Allopathic|Naturopathic\", \"treatments\": [{\"name\": \"treatment\", \"description\": \"how it works\", \"source\": \"source name\", \"url\": \"URL\", \"recommendedQuestions\": [\"q1\", \"q2\"]}]}]}",
+            prompt: "For these conditions, provide treatment approaches in Common Sense, Allopathic, Ayurvedic, Naturopathic, Homeopathic, and Unani medicine. Include reputable sources. Format as JSON: {\"solutions\": [{\"category\": \"Common Sense|Allopathic|Ayurvedic|Naturopathic|Homeopathic|Unani\", \"treatments\": [{\"name\": \"treatment\", \"description\": \"how it works\", \"source\": \"source name\", \"url\": \"URL\", \"recommendedQuestions\": [\"q1\", \"q2\"]}]}]}",
             context: "Conditions: \(conditionsText)"
         )
 

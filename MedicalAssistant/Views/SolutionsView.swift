@@ -9,6 +9,10 @@ import SwiftUI
 
 struct SolutionsView: View {
     @EnvironmentObject var viewModel: MedicalAssistantViewModel
+    @State private var selectedCategory: String = "Common Sense"
+    
+    // Define the desired order of categories
+    let categories = ["Common Sense", "Allopathic", "Ayurvedic", "Naturopathic", "Homeopathic", "Unani"]
 
     var body: some View {
         ScrollView {
@@ -42,12 +46,49 @@ struct SolutionsView: View {
                     Text("Treatment Solutions")
                         .font(.title2)
                         .bold()
+                    
+                    // Category Selector
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 12) {
+                            ForEach(categories, id: \.self) { category in
+                                Button(action: {
+                                    selectedCategory = category
+                                }) {
+                                    Text(category)
+                                        .fontWeight(.medium)
+                                        .padding(.vertical, 8)
+                                        .padding(.horizontal, 16)
+                                        .background(selectedCategory == category ? Color.blue : Color(.systemGray5))
+                                        .foregroundColor(selectedCategory == category ? .white : .primary)
+                                        .cornerRadius(20)
+                                }
+                            }
+                        }
+                        .padding(.horizontal, 4)
+                    }
 
                     if let solutions = viewModel.solutions {
-                        VStack(spacing: 20) {
-                            ForEach(solutions.solutions) { category in
-                                SolutionCategoryView(category: category)
+                        // Filter solutions for the selected category
+                        // Note: The API might return categories with slightly different casing or names, so we try to match loosely or exact.
+                        // For now, we filter by checking if the category name contains the selected category string.
+                        let filteredSolutions = solutions.solutions.filter { $0.category.localizedCaseInsensitiveContains(selectedCategory) }
+                        
+                        if !filteredSolutions.isEmpty {
+                            VStack(spacing: 20) {
+                                ForEach(filteredSolutions) { category in
+                                    SolutionCategoryView(category: category)
+                                }
                             }
+                        } else {
+                            VStack(spacing: 12) {
+                                Image(systemName: "doc.text.magnifyingglass")
+                                    .font(.largeTitle)
+                                    .foregroundColor(.gray)
+                                Text("No solutions found for \(selectedCategory).")
+                                    .foregroundColor(.secondary)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.top, 40)
                         }
                     } else {
                         Text("No solutions available yet. Please analyze causes first.")
@@ -139,7 +180,7 @@ struct TreatmentCard: View {
                             .font(.caption)
                             .padding(8)
                             .frame(maxWidth: .infinity, alignment: .leading)
-                            .background(Color.white)
+                            .background(Color(.systemBackground))
                             .cornerRadius(8)
                             .overlay(
                                 RoundedRectangle(cornerRadius: 8)
@@ -165,7 +206,7 @@ struct TreatmentCard: View {
             }
         }
         .padding()
-        .background(Color.white)
+        .background(Color(.systemBackground))
         .cornerRadius(12)
     }
 }

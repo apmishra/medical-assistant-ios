@@ -150,7 +150,7 @@ I never give vague answers. If the question is broad, I break it into parts. I a
         let conditionsText = conditions.joined(separator: ", ")
         let response = try await callGemini(
             apiKey: apiKey,
-            prompt: "For these conditions, provide treatment approaches in Ayurvedic, Homeopathic, Allopathic, and Naturopathic medicine. Include reputable sources. Format as JSON: {\"solutions\": [{\"category\": \"Ayurvedic|Homeopathic|Allopathic|Naturopathic\", \"treatments\": [{\"name\": \"treatment\", \"description\": \"how it works\", \"source\": \"source name\", \"url\": \"URL\", \"recommendedQuestions\": [\"q1\", \"q2\"]}]}]}. Return ONLY JSON. Do not wrap in markdown code blocks.",
+            prompt: "For these conditions, provide treatment approaches in Common Sense, Allopathic, Ayurvedic, Naturopathic, Homeopathic, and Unani medicine. Include reputable sources. Format as JSON: {\"solutions\": [{\"category\": \"Common Sense|Allopathic|Ayurvedic|Naturopathic|Homeopathic|Unani\", \"treatments\": [{\"name\": \"treatment\", \"description\": \"how it works\", \"source\": \"source name\", \"url\": \"URL\", \"recommendedQuestions\": [\"q1\", \"q2\"]}]}]}. Return ONLY JSON. Do not wrap in markdown code blocks.",
             context: "Conditions: \(conditionsText)"
         )
         

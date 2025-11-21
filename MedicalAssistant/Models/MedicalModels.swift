@@ -37,36 +37,12 @@ struct MedicalCause: Identifiable, Codable, Hashable {
         case low
         case medium
         case high
-        
-        init(from decoder: Decoder) throws {
-            let container = try decoder.singleValueContainer()
-            let string = try container.decode(String.self).lowercased()
-            
-            if let value = Probability(rawValue: string) {
-                self = value
-            } else {
-                // Fallback or throw specific error
-                throw DecodingError.dataCorruptedError(in: container, debugDescription: "Invalid probability value: \(string)")
-            }
-        }
     }
 
     enum Urgency: String, Codable {
         case routine
         case soon
         case immediate
-        
-        init(from decoder: Decoder) throws {
-            let container = try decoder.singleValueContainer()
-            let string = try container.decode(String.self).lowercased()
-            
-            if let value = Urgency(rawValue: string) {
-                self = value
-            } else {
-                // Fallback or throw specific error
-                throw DecodingError.dataCorruptedError(in: container, debugDescription: "Invalid urgency value: \(string)")
-            }
-        }
     }
 
     enum CodingKeys: String, CodingKey {
