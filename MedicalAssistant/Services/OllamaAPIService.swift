@@ -8,7 +8,7 @@
 import Foundation
 import PDFKit
 
-class OllamaAPIService {
+class OllamaAPIService: @unchecked Sendable {
     static let shared = OllamaAPIService()
     // LLM Tuning Parameters
     var temperature: Double = 0.7
@@ -247,111 +247,6 @@ class OllamaAPIService {
         }
     }
     
-    func findSolutions(baseURL: String, model: String, conditions: [String]) async throws -> SolutionsResponse {
-        let systemPrompt = """
-        Return ONLY valid JSON, no explanatory text.
-        
-        For EACH condition, provide treatments organized by medical system.
-        
-        CRITICAL: Each treatment MUST be a JSON object with these 5 fields:
-        - "name": Treatment name
-        - "description": Single-line description
-        - "source": Source name
-        - "url": URL or empty string
-        - "recommendedQuestions": Array of 2-3 questions
-        
-        Provide treatments for ALL 5 medical systems per condition:
-        1. Allopathic (modern medicine)
-        2. Ayurvedic
-        3. Naturopathic
-        4. Homeopathic
-        5. Unani
-        
-        Structure: Array where each element is ONE condition with its systems.
-        
-        Example:
-        {
-          "solutions": [
-            {
-              "causeName": "Condition Name",
-              "systems": [
-                {
-                  "category": "Allopathic",
-                  "treatments": [
-                    {
-                      "name": "Treatment Name",
-                      "description": "Description",
-                      "source": "Medical Guidance",
-                      "url": "",
-                      "recommendedQuestions": ["Q1", "Q2"]
-                    }
-                  ]
-                }
-              ]
-            }
-          ]
-        }
-        """
-        
-        let userMessage = "Provide solutions for these conditions: \(conditions.joined(separator: ", "))"
-        
-        let response = try await callOllama(baseURL: baseURL, model: model, messages: [["role": "user", "content": userMessage]], systemPrompt: systemPrompt)
-        
-        // Multi-strategy JSON extraction
-        var jsonString = response
-        
-        // Strategy 1: Try regex extraction for JSON object
-        if let jsonRange = response.range(of: "\\{[\\s\\S]*\\}", options: .regularExpression) {
-            jsonString = String(response[jsonRange])
-        } 
-        // Strategy 2: If no match, try removing markdown blocks (original method)
-        else {
-            jsonString = response
-                .replacingOccurrences(of: "```json", with: "")
-                .replacingOccurrences(of: "```", with: "")
-                .trimmingCharacters(in: .whitespacesAndNewlines)
-        }
-        
-        guard let data = jsonString.data(using: .utf8) else {
-             throw NSError(domain: "OllamaAPIService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid response encoding"])
-        }
-        
-        do {
-            // Try direct decoding first
-            return try JSONDecoder().decode(SolutionsResponse.self, from: data)
-        } catch let decodingError {
-            print("Failed to parse solutions directly. Error: \(decodingError)")
-            print("Raw response: \(jsonString)")
-            
-            // Fallback: Create a simple solution from the conditions
-            print("Creating fallback solution...")
-            let fallbackSolutions = conditions.map { condition in
-                let fallbackTreatment = Treatment(
-                    name: "Consult Healthcare Provider about \(condition)",
-                    description: "Please consult with a qualified healthcare provider for proper diagnosis and treatment of \(condition).",
-                    source: "Medical Guidance",
-                    url: "",
-                    recommendedQuestions: [
-                        "What tests are needed to confirm this condition?",
-                        "What are the treatment options available?",
-                        "What lifestyle changes should I consider?"
-                    ]
-                )
-                
-                let fallbackCategory = SolutionCategory(
-                    category: "Medical Consultation",
-                    treatments: [fallbackTreatment]
-                )
-                
-                return CauseSolution(
-                    causeName: condition,
-                    systems: [fallbackCategory]
-                )
-            }
-            
-            return SolutionsResponse(solutions: fallbackSolutions)
-        }
-    }
     
     // MARK: - Chat Functions
     

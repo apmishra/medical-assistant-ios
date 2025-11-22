@@ -148,8 +148,6 @@ struct SettingsView: View {
                                 .foregroundColor(.secondary)
                             TextField("http://localhost:11434", text: $viewModel.ollamaBaseURL)
                                 .textFieldStyle(RoundedBorderTextFieldStyle())
-                                .autocapitalization(.none)
-                                .disableAutocorrection(true)
                         }
                         
                         VStack(alignment: .leading) {
@@ -158,8 +156,6 @@ struct SettingsView: View {
                                 .foregroundColor(.secondary)
                             TextField("llama3", text: $viewModel.ollamaModel)
                                 .textFieldStyle(RoundedBorderTextFieldStyle())
-                                .autocapitalization(.none)
-                                .disableAutocorrection(true)
                         }
                         
                         Button(action: {
@@ -196,8 +192,6 @@ struct SettingsView: View {
                         // Standard API Key Field
                         SecureField("Enter \(viewModel.selectedProvider.rawValue) API key", text: $tempApiKey)
                             .textFieldStyle(RoundedBorderTextFieldStyle())
-                            .autocapitalization(.none)
-                            .disableAutocorrection(true)
 
                         Button(action: {
                             switch viewModel.selectedProvider {
@@ -288,6 +282,12 @@ struct SettingsView: View {
                             .foregroundColor(.green)
                     }
                 }
+
+                Divider()
+
+                // Category Management
+                CategoryManagementView()
+                    .environmentObject(viewModel)
 
                 Divider()
 

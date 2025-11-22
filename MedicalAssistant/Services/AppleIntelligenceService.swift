@@ -9,7 +9,7 @@ import Foundation
 import NaturalLanguage
 import PDFKit
 
-class AppleIntelligenceService {
+class AppleIntelligenceService: @unchecked Sendable {
     static let shared = AppleIntelligenceService()
     
     private init() {}
@@ -91,48 +91,6 @@ class AppleIntelligenceService {
         ])
     }
     
-    func findSolutions(conditions: [String]) async throws -> SolutionsResponse {
-        let solutions = conditions.map { condition in
-            CauseSolution(
-                causeName: condition,
-                systems: [
-                    SolutionCategory(
-                        category: "Allopathic",
-                        treatments: [
-                            Treatment(
-                                name: "Professional Consultation",
-                                description: "Schedule an appointment with a healthcare provider to discuss the identified symptoms.",
-                                source: "Medical Standard",
-                                url: "https://www.google.com/search?q=doctors+near+me",
-                                recommendedQuestions: ["When did the symptoms start?", "Have they worsened over time?"]
-                            ),
-                            Treatment(
-                                name: "Symptom Monitoring",
-                                description: "Keep a log of symptom severity and frequency to share with your doctor.",
-                                source: "Self Care",
-                                url: "",
-                                recommendedQuestions: []
-                            )
-                        ]
-                    ),
-                    SolutionCategory(
-                        category: "Naturopathic",
-                        treatments: [
-                            Treatment(
-                                name: "Rest and Hydration",
-                                description: "Ensure adequate rest and fluid intake while awaiting professional advice.",
-                                source: "General Advice",
-                                url: "",
-                                recommendedQuestions: []
-                            )
-                        ]
-                    )
-                ]
-            )
-        }
-        
-        return SolutionsResponse(solutions: solutions)
-    }
     
     // MARK: - Chat
     func chatWithSource(message: String, treatment: Treatment, symptoms: [String] = [], causes: [String] = []) async throws -> String {

@@ -8,7 +8,7 @@
 import Foundation
 import PDFKit
 
-class OpenAIAPIService {
+class OpenAIAPIService: @unchecked Sendable {
     static let shared = OpenAIAPIService()
     
     private let systemPrompt = """
@@ -232,47 +232,6 @@ class OpenAIAPIService {
         return CausesResponse(causes: validCauses)
     }
     
-    func findSolutions(apiKey: String, conditions: [String]) async throws -> SolutionsResponse {
-        let system = """
-        For EACH condition, provide treatment approaches organized by medical system.
-        
-        For EACH condition, provide treatments in these 5 medical systems:
-        1. Allopathic (modern medicine)
-        2. Ayurvedic
-        3. Naturopathic
-        4. Homeopathic
-        5. Unani
-        
-        Format as JSON with "solutions" containing an array where each element represents ONE condition:
-        {
-          "solutions": [
-            {
-              "causeName": "Condition Name",
-              "systems": [
-                {"category": "Allopathic", "treatments": [{"name": "Name", "description": "Desc", "source": "Source", "url": "", "recommendedQuestions": ["Q1"]}]}
-              ]
-            }
-          ]
-        }
-        """
-        
-        let userMessage = "Conditions: \(conditions.joined(separator: ", "))"
-        
-        let (response, _, _) = try await callOpenAI(
-            apiKey: apiKey,
-            messages: [
-                ["role": "system", "content": system],
-                ["role": "user", "content": userMessage]
-            ],
-            jsonMode: true
-        )
-        
-        guard let data = response.data(using: .utf8) else {
-             throw NSError(domain: "OpenAIAPIService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid response encoding"])
-        }
-        
-        return try JSONDecoder().decode(SolutionsResponse.self, from: data)
-    }
     
     // MARK: - Chat Functions
     

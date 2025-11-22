@@ -7,7 +7,7 @@
 
 import Foundation
 
-class GeminiAPIService {
+class GeminiAPIService: @unchecked Sendable {
     static let shared = GeminiAPIService()
     
     private let systemPrompt = """
@@ -172,66 +172,6 @@ I never give vague answers. If the question is broad, I break it into parts. I a
         return try decoder.decode(CausesResponse.self, from: jsonData)
     }
     
-    func findSolutions(apiKey: String, conditions: [String]) async throws -> SolutionsResponse {
-        let conditionsText = conditions.joined(separator: "\", \"")
-        let response = try await callGemini(
-            apiKey: apiKey,
-            prompt: """
-            For EACH of the following conditions, provide treatment approaches organized by medical system.
-            
-            Conditions: ["\(conditionsText)"]
-            
-            For EACH condition, provide treatments in these 6 medical systems:
-            1. General (General advice, lifestyle changes, or treatments that don't fit other categories)
-            2. Allopathic (Modern medicine)
-            3. Ayurvedic
-            4. Naturopathic
-            5. Homeopathic
-            6. Unani
-            
-            Structure the response as an array where each element represents ONE condition.
-            
-            Format strictly as JSON:
-            {
-              "solutions": [
-                {
-                  "causeName": "Condition Name",
-                  "systems": [
-                    {
-                      "category": "Allopathic",
-                      "treatments": [{"name": "Name", "description": "Desc", "source": "Source", "url": "", "recommendedQuestions": ["Q1"]}]
-                    }
-                  ]
-                }
-              ]
-            }
-            Return ONLY JSON. Do not wrap in markdown code blocks.
-            """,
-            context: "Conditions: \(conditionsText)"
-        )
-        
-        // Multi-strategy JSON extraction
-        var jsonString = response
-        
-        // Strategy 1: Try regex extraction for JSON object
-        if let jsonRange = response.range(of: "\\{[\\s\\S]*\\}", options: .regularExpression) {
-            jsonString = String(response[jsonRange])
-        } 
-        // Strategy 2: If no match, try removing markdown blocks (original method)
-        else {
-            jsonString = response
-                .replacingOccurrences(of: "```json", with: "")
-                .replacingOccurrences(of: "```", with: "")
-                .trimmingCharacters(in: .whitespacesAndNewlines)
-        }
-        
-        guard let jsonData = jsonString.data(using: .utf8) else {
-            throw NSError(domain: "GeminiAPI", code: -1, userInfo: [NSLocalizedDescriptionKey: "Could not parse solutions from response"])
-        }
-        
-        let decoder = JSONDecoder()
-        return try decoder.decode(SolutionsResponse.self, from: jsonData)
-    }
     
     func chatWithSource(apiKey: String, message: String, treatment: Treatment, symptoms: [String] = [], causes: [String] = []) async throws -> String {
         var contextParts: [String] = []

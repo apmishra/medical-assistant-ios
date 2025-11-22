@@ -19,6 +19,9 @@
 		3114364B2ED1569800133BEC /* AuthenticationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3114364A2ED1569800133BEC /* AuthenticationService.swift */; };
 		3114364D2ED156A200133BEC /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3114364C2ED156A200133BEC /* LoginView.swift */; };
 		3114364F2ED15F1500133BEC /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3114364E2ED15F1500133BEC /* HomeView.swift */; };
+		311436512ED1858400133BEC /* CategoryManagementView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 311436502ED1858400133BEC /* CategoryManagementView.swift */; };
+		311436542ED195E900133BEC /* TreatmentsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 311436532ED195E900133BEC /* TreatmentsView.swift */; };
+		311436552ED195E900133BEC /* CauseTreatmentsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 311436522ED195E900133BEC /* CauseTreatmentsView.swift */; };
 		FA0000010000000000000001 /* MedicalAssistantApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000020000000000000001 /* MedicalAssistantApp.swift */; };
 		FA0000030000000000000001 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000040000000000000001 /* ContentView.swift */; };
 		FA0000050000000000000001 /* MedicalModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000060000000000000001 /* MedicalModels.swift */; };
@@ -27,7 +30,6 @@
 		FA0000110000000000000001 /* UploadView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000120000000000000001 /* UploadView.swift */; };
 		FA0000130000000000000001 /* SymptomsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000140000000000000001 /* SymptomsView.swift */; };
 		FA0000150000000000000001 /* CausesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000160000000000000001 /* CausesView.swift */; };
-		FA0000170000000000000001 /* SolutionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000180000000000000001 /* SolutionsView.swift */; };
 		FA0000190000000000000001 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000200000000000000001 /* SettingsView.swift */; };
 		FA0000210000000000000001 /* DebugView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000220000000000000001 /* DebugView.swift */; };
 		FA0000230000000000000001 /* ChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000240000000000000001 /* ChatView.swift */; };
@@ -49,6 +51,9 @@
 		3114364A2ED1569800133BEC /* AuthenticationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthenticationService.swift; sourceTree = "<group>"; };
 		3114364C2ED156A200133BEC /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
 		3114364E2ED15F1500133BEC /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
+		311436502ED1858400133BEC /* CategoryManagementView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategoryManagementView.swift; sourceTree = "<group>"; };
+		311436522ED195E900133BEC /* CauseTreatmentsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CauseTreatmentsView.swift; sourceTree = "<group>"; };
+		311436532ED195E900133BEC /* TreatmentsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TreatmentsView.swift; sourceTree = "<group>"; };
 		FA0000020000000000000001 /* MedicalAssistantApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MedicalAssistantApp.swift; sourceTree = "<group>"; };
 		FA0000040000000000000001 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		FA0000060000000000000001 /* MedicalModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MedicalModels.swift; sourceTree = "<group>"; };
@@ -57,7 +62,6 @@
 		FA0000120000000000000001 /* UploadView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UploadView.swift; sourceTree = "<group>"; };
 		FA0000140000000000000001 /* SymptomsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SymptomsView.swift; sourceTree = "<group>"; };
 		FA0000160000000000000001 /* CausesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CausesView.swift; sourceTree = "<group>"; };
-		FA0000180000000000000001 /* SolutionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SolutionsView.swift; sourceTree = "<group>"; };
 		FA0000200000000000000001 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		FA0000220000000000000001 /* DebugView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugView.swift; sourceTree = "<group>"; };
 		FA0000240000000000000001 /* ChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatView.swift; sourceTree = "<group>"; };
@@ -108,6 +112,9 @@
 		FA0000320000000000000001 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				311436522ED195E900133BEC /* CauseTreatmentsView.swift */,
+				311436532ED195E900133BEC /* TreatmentsView.swift */,
+				311436502ED1858400133BEC /* CategoryManagementView.swift */,
 				3114364E2ED15F1500133BEC /* HomeView.swift */,
 				3114364C2ED156A200133BEC /* LoginView.swift */,
 				311436402ED025DB00133BEC /* SessionsView.swift */,
@@ -118,7 +125,6 @@
 				FA0000120000000000000001 /* UploadView.swift */,
 				FA0000140000000000000001 /* SymptomsView.swift */,
 				FA0000160000000000000001 /* CausesView.swift */,
-				FA0000180000000000000001 /* SolutionsView.swift */,
 				FA0000200000000000000001 /* SettingsView.swift */,
 				FA0000220000000000000001 /* DebugView.swift */,
 				FA0000240000000000000001 /* ChatView.swift */,
@@ -220,6 +226,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				311436542ED195E900133BEC /* TreatmentsView.swift in Sources */,
+				311436552ED195E900133BEC /* CauseTreatmentsView.swift in Sources */,
 				FA0000010000000000000001 /* MedicalAssistantApp.swift in Sources */,
 				FA0000030000000000000001 /* ContentView.swift in Sources */,
 				FA0000050000000000000001 /* MedicalModels.swift in Sources */,
@@ -233,11 +241,11 @@
 				FA0000130000000000000001 /* SymptomsView.swift in Sources */,
 				311436382ED0164200133BEC /* GeminiAPIService.swift in Sources */,
 				311436452ED02F3200133BEC /* OllamaAPIService.swift in Sources */,
+				311436512ED1858400133BEC /* CategoryManagementView.swift in Sources */,
 				311436492ED0E9DA00133BEC /* AppleIntelligenceService.swift in Sources */,
 				3114363F2ED021D000133BEC /* CauseChatView.swift in Sources */,
 				311436392ED0164200133BEC /* OpenAIAPIService.swift in Sources */,
 				FA0000150000000000000001 /* CausesView.swift in Sources */,
-				FA0000170000000000000001 /* SolutionsView.swift in Sources */,
 				FA0000190000000000000001 /* SettingsView.swift in Sources */,
 				311436422ED025DB00133BEC /* SplashView.swift in Sources */,
 				311436432ED025DB00133BEC /* SessionsView.swift in Sources */,

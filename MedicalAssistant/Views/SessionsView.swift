@@ -9,15 +9,20 @@ import SwiftUI
 
 struct SessionsView: View {
     @EnvironmentObject var viewModel: MedicalAssistantViewModel
+    @EnvironmentObject var authService: AuthenticationService
     @State private var searchText = ""
     @State private var sessionToRename: MedicalSession?
     @State private var newName = ""
 
     var filteredSessions: [MedicalSession] {
+        guard let currentUserId = authService.userId else { return [] }
+        
+        let sessions = viewModel.sessions.filter { $0.authProvider == currentUserId }
+        
         if searchText.isEmpty {
-            return viewModel.sessions
+            return sessions
         } else {
-            return viewModel.sessions.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
+            return sessions.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
         }
     }
 

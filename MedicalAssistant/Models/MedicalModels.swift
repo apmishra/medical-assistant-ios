@@ -55,8 +55,8 @@ struct CausesResponse: Codable {
 }
 
 // MARK: - Solution
-struct Treatment: Identifiable, Codable {
-    let id = UUID()
+struct Treatment: Identifiable, Codable, Hashable {
+    let id: UUID
     let name: String
     let description: String
     let source: String
@@ -65,6 +65,33 @@ struct Treatment: Identifiable, Codable {
 
     enum CodingKeys: String, CodingKey {
         case name, description, source, url, recommendedQuestions
+    }
+
+    init(name: String, description: String, source: String, url: String, recommendedQuestions: [String]) {
+        self.id = UUID()
+        self.name = name
+        self.description = description
+        self.source = source
+        self.url = url
+        self.recommendedQuestions = recommendedQuestions
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = UUID()  // Generate new ID for each instance
+        self.name = try container.decode(String.self, forKey: .name)
+        self.description = try container.decode(String.self, forKey: .description)
+        self.source = try container.decode(String.self, forKey: .source)
+        self.url = try container.decode(String.self, forKey: .url)
+        self.recommendedQuestions = try container.decode([String].self, forKey: .recommendedQuestions)
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+    }
+
+    static func == (lhs: Treatment, rhs: Treatment) -> Bool {
+        return lhs.id == rhs.id
     }
 }
 
@@ -200,7 +227,9 @@ struct MedicalSession: Identifiable, Codable {
     var additionalSymptoms: String
     var potentialCauses: CausesResponse?
     var selectedCauses: Set<MedicalCause>
-    var solutions: SolutionsResponse?
+    var selectedTreatments: [Treatment]
+    var treatmentsByCause: [String: [Treatment]]
+    var selectedTreatmentsByCause: [String: Set<String>]
     var chatMessages: [String: [ChatMessage]]
     var debugLogs: [DebugLog]
     var authProvider: String
@@ -217,7 +246,9 @@ struct MedicalSession: Identifiable, Codable {
         self.additionalSymptoms = ""
         self.potentialCauses = nil
         self.selectedCauses = []
-        self.solutions = nil
+        self.selectedTreatments = []
+        self.treatmentsByCause = [:]
+        self.selectedTreatmentsByCause = [:]
         self.chatMessages = [:]
         self.debugLogs = []
     }
@@ -240,16 +271,6 @@ struct MedicalSession: Identifiable, Codable {
             csv += "Selected Cause,\"\(cause.condition)\",\(cause.probability.rawValue) probability\n"
         }
         
-        // Solutions
-        if let solutions = solutions {
-            for causeSolution in solutions.solutions {
-                for system in causeSolution.systems {
-                    for treatment in system.treatments {
-                        csv += "Solution,\"\(treatment.name)\",\(causeSolution.causeName) - \(system.category)\n"
-                    }
-                }
-            }
-        }
         
         return csv
     }

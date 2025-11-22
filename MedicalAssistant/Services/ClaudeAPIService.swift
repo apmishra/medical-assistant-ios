@@ -7,7 +7,7 @@
 
 import Foundation
 
-class ClaudeAPIService {
+class ClaudeAPIService: @unchecked Sendable {
     static let shared = ClaudeAPIService()
 
     private let systemPrompt = """
@@ -125,70 +125,6 @@ From now on, act as my expert assistant with access to all your reasoning and kn
         return try decoder.decode(CausesResponse.self, from: jsonData)
     }
 
-    func findSolutions(apiKey: String, conditions: [String]) async throws -> SolutionsResponse {
-        let conditionsText = conditions.joined(separator: "\", \"")
-        let response = try await callClaude(
-            apiKey: apiKey,
-            prompt: """
-            For EACH of the following conditions, provide treatment approaches organized by medical system.
-            
-            Conditions: ["\(conditionsText)"]
-            
-            For EACH condition, provide treatments in these 6 medical systems:
-            1. General (General advice, lifestyle changes, or treatments that don't fit other categories)
-            2. Allopathic (Modern medicine)
-            3. Ayurvedic
-            4. Naturopathic
-            5. Homeopathic
-            6. Unani
-            
-            CRITICAL: Structure the response as an array where each element represents ONE condition with its treatments across all systems.
-            
-            Format strictly as JSON:
-            {
-              "solutions": [
-                {
-                  "causeName": "First Condition Name",
-                  "systems": [
-                    {
-                      "category": "Allopathic",
-                      "treatments": [
-                        {
-                          "name": "Treatment Name",
-                          "description": "Detailed description",
-                          "source": "Reputable Source Name",
-                          "url": "https://source-url.com",
-                          "recommendedQuestions": ["Question 1", "Question 2"]
-                        }
-                      ]
-                    },
-                    {
-                      "category": "Ayurvedic",
-                      "treatments": [...]
-                    }
-                  ]
-                },
-                {
-                  "causeName": "Second Condition Name",
-                  "systems": []
-                }
-              ]
-            }
-            
-            Ensure EVERY condition has ALL 6 medical systems, even if some have fewer treatments.
-            """,
-            context: "Conditions: \(conditionsText)"
-        )
-
-        // Extract JSON from response
-        guard let jsonRange = response.range(of: "\\{[\\s\\S]*\\}", options: .regularExpression),
-              let jsonData = response[jsonRange].data(using: .utf8) else {
-            throw NSError(domain: "ClaudeAPI", code: -1, userInfo: [NSLocalizedDescriptionKey: "Could not parse solutions from response"])
-        }
-
-        let decoder = JSONDecoder()
-        return try decoder.decode(SolutionsResponse.self, from: jsonData)
-    }
 
     func chatWithSource(apiKey: String, message: String, treatment: Treatment, symptoms: [String] = [], causes: [String] = []) async throws -> String {
         var contextParts: [String] = []

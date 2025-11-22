@@ -11,74 +11,49 @@ struct CausesView: View {
     @EnvironmentObject var viewModel: MedicalAssistantViewModel
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 24) {
-                // Disclaimer
-                DisclaimerBanner()
+        NavigationView {
+            ScrollView {
+                VStack(spacing: 24) {
+                    // Disclaimer
+                    DisclaimerBanner()
 
-                // Potential Causes
-                VStack(alignment: .leading, spacing: 16) {
-                    Text("Potential Causes")
-                        .font(.title2)
-                        .bold()
+                    // Potential Causes
+                    VStack(alignment: .leading, spacing: 16) {
+                        Text("Potential Causes")
+                            .font(.title2)
+                            .bold()
 
-                    if let causes = viewModel.potentialCauses {
-                        VStack(spacing: 12) {
-                            ForEach(causes.causes) { cause in
-                                HStack(spacing: 12) {
-                                    Button(action: {
-                                        viewModel.toggleCause(cause)
-                                    }) {
-                                        Image(systemName: viewModel.selectedCauses.contains(cause) ? "checkmark.square.fill" : "square")
-                                            .font(.title2)
-                                            .foregroundColor(viewModel.selectedCauses.contains(cause) ? .blue : .gray)
+                        if let causes = viewModel.potentialCauses {
+                            VStack(spacing: 12) {
+                                ForEach(causes.causes) { cause in
+                                    HStack(spacing: 12) {
+                                        Button(action: {
+                                            viewModel.toggleCause(cause)
+                                        }) {
+                                            Image(systemName: viewModel.selectedCauses.contains(cause) ? "checkmark.square.fill" : "square")
+                                                .font(.title2)
+                                                .foregroundColor(viewModel.selectedCauses.contains(cause) ? .blue : .gray)
+                                        }
+                                        .buttonStyle(PlainButtonStyle())
+
+                                        NavigationLink(destination: CauseTreatmentsView(cause: cause)
+                                            .environmentObject(viewModel)) {
+                                            CauseCard(cause: cause)
+                                        }
                                     }
-                                    .buttonStyle(PlainButtonStyle())
-
-                                    Button(action: {
-                                        viewModel.startCauseChat(with: cause)
-                                    }) {
-                                        CauseCard(cause: cause)
-                                    }
-                                    .buttonStyle(PlainButtonStyle())
                                 }
                             }
+                        } else {
+                            Text("No analysis available yet. Please analyze symptoms first.")
+                                .foregroundColor(.secondary)
+                                .padding()
                         }
-                    } else {
-                        Text("No analysis available yet. Please analyze symptoms first.")
-                            .foregroundColor(.secondary)
-                            .padding()
                     }
-                }
 
-                // Find Solutions Button
-                if viewModel.potentialCauses != nil {
-                    Button(action: {
-                        Task {
-                            if await viewModel.findSolutions() {
-                                viewModel.selectedTab = 3 // Go to Solutions tab
-                            }
-                        }
-                    }) {
-                        HStack {
-                            if viewModel.isLoading {
-                                ProgressView()
-                                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                                Text("Finding Solutions...")
-                            } else {
-                                Text("Find Treatment Solutions")
-                            }
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(viewModel.isLoading ? Color.gray : Color.blue)
-                        .foregroundColor(.white)
-                        .cornerRadius(8)
-                    }
-                    .disabled(viewModel.isLoading)
                 }
+                .padding()
             }
-            .padding()
+            .navigationTitle("Causes")
         }
     }
 }

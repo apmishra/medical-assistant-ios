@@ -39,7 +39,9 @@ class MedicalAssistantViewModel: ObservableObject {
     @Published var confirmedSymptoms: Set<Symptom> = [] { didSet { updateCurrentSession() } }
     @Published var additionalSymptoms: String = "" { didSet { updateCurrentSession() } }
     @Published var potentialCauses: CausesResponse? { didSet { updateCurrentSession() } }
-    @Published var solutions: SolutionsResponse? { didSet { updateCurrentSession() } }
+    @Published var selectedTreatments: [Treatment] = [] { didSet { updateCurrentSession() } }
+    @Published var treatmentsByCause: [String: [Treatment]] = [:] { didSet { updateCurrentSession() } }
+    @Published var selectedTreatmentsByCause: [String: Set<String>] = [:] { didSet { updateCurrentSession() } }
     @Published var chatMessages: [String: [ChatMessage]] = [:] { didSet { updateCurrentSession() } }
     @Published var activeChatTreatment: Treatment?
     @Published var activeChatSymptom: Symptom?
@@ -50,7 +52,12 @@ class MedicalAssistantViewModel: ObservableObject {
     @Published var debugLogs: [DebugLog] = [] { didSet { updateCurrentSession() } }
     @Published var isLoading: Bool = false
     @Published var showApiKeyInput: Bool = false
-    
+    @Published var categories: [String] = [] {
+        didSet {
+            saveCategories()
+        }
+    }
+
     // Session Management
     @Published var sessions: [MedicalSession] = []
     @Published var currentSessionId: UUID?
@@ -71,10 +78,12 @@ class MedicalAssistantViewModel: ObservableObject {
     private let maxTokensStorageKey = "llm_max_tokens"
     private let topPStorageKey = "llm_top_p"
     private let customSystemPromptStorageKey = "llm_custom_system_prompt"
+    private let categoriesStorageKey = "medical_categories"
 
     init() {
         loadAPIKey()
         loadSessions()
+        loadCategories()
     }
 
     // MARK: - API Key Management
@@ -383,45 +392,6 @@ class MedicalAssistantViewModel: ObservableObject {
         return success
     }
 
-    // MARK: - Solution Finding
-    func findSolutions() async -> Bool {
-        guard let causes = potentialCauses else {
-            addDebugLog("Please analyze causes first", type: .warning)
-            return false
-        }
-
-        isLoading = true
-        addDebugLog("Searching for treatment solutions...", type: .info)
-        var success = false
-
-        // Use selected causes if any, otherwise use all potential causes
-        let targetCauses = selectedCauses.isEmpty ? causes.causes : Array(selectedCauses)
-        let conditions = targetCauses.map { $0.condition }
-
-        do {
-            let solutions: SolutionsResponse
-            switch selectedProvider {
-            case .claude:
-                solutions = try await apiService.findSolutions(apiKey: apiKey, conditions: conditions)
-            case .gemini:
-                solutions = try await geminiService.findSolutions(apiKey: geminiApiKey, conditions: conditions)
-            case .openai:
-                solutions = try await openaiService.findSolutions(apiKey: openaiApiKey, conditions: conditions)
-            case .ollama:
-                solutions = try await ollamaService.findSolutions(baseURL: ollamaBaseURL, model: ollamaModel, conditions: conditions)
-            case .appleIntelligence:
-                solutions = try await appleIntelligenceService.findSolutions(conditions: conditions)
-            }
-            self.solutions = solutions
-            addDebugLog("Found solutions using \(selectedProvider.rawValue)", type: .success)
-            success = true
-        } catch {
-            addDebugLog("Failed to find solutions: \(error.localizedDescription)", type: .error)
-        }
-
-        isLoading = false
-        return success
-    }
 
     // MARK: - Chat
     func startChat(with treatment: Treatment) {
@@ -479,6 +449,273 @@ class MedicalAssistantViewModel: ObservableObject {
         activeChatSymptom = nil
         activeChatCause = nil
     }
+
+    // MARK: - Category Management
+
+    func loadCategories() {
+        if let savedCategories = UserDefaults.standard.array(forKey: categoriesStorageKey) as? [String] {
+            categories = savedCategories
+        } else {
+            // Pre-populate with default categories
+            categories = ["General", "Allopathic", "Ayurvedic", "Homeopathic", "Naturopathic", "Unani"]
+        }
+    }
+
+    func saveCategories() {
+        UserDefaults.standard.set(categories, forKey: categoriesStorageKey)
+    }
+
+    func addCategory(_ category: String) -> Bool {
+        // Check if category already exists
+        if categories.contains(category) {
+            return false
+        }
+
+        // Check if we've reached the maximum of 7 categories
+        if categories.count >= 7 {
+            return false
+        }
+
+        categories.append(category)
+        return true
+    }
+
+    func removeCategory(at index: Int) {
+        guard index >= 0 && index < categories.count else { return }
+        categories.remove(at: index)
+    }
+
+    func updateCategory(at index: Int, with newName: String) -> Bool {
+        guard index >= 0 && index < categories.count else { return false }
+
+        // Check if the new name already exists (excluding the current index)
+        if categories.contains(newName) && categories[index] != newName {
+            return false
+        }
+
+        categories[index] = newName
+        return true
+    }
+
+    // MARK: - Treatment Management
+
+    func toggleTreatmentSelection(for cause: String, treatment: Treatment) {
+        let treatmentKey = treatment.name + treatment.description // Unique identifier for the treatment
+
+        if selectedTreatmentsByCause[cause] == nil {
+            selectedTreatmentsByCause[cause] = []
+        }
+
+        if selectedTreatmentsByCause[cause]?.contains(treatmentKey) == true {
+            // Remove from selected
+            selectedTreatmentsByCause[cause]?.remove(treatmentKey)
+
+            // Remove from overall selected treatments if it exists there
+            if let index = selectedTreatments.firstIndex(where: { $0.name == treatment.name && $0.description == treatment.description }) {
+                selectedTreatments.remove(at: index)
+            }
+        } else {
+            // Add to selected
+            selectedTreatmentsByCause[cause]?.insert(treatmentKey)
+
+            // Add to overall selected treatments if not already there
+            if !selectedTreatments.contains(where: { $0.name == treatment.name && $0.description == treatment.description }) {
+                selectedTreatments.append(treatment)
+            }
+        }
+    }
+
+    func isTreatmentSelected(for cause: String, treatment: Treatment) -> Bool {
+        let treatmentKey = treatment.name + treatment.description
+        return selectedTreatmentsByCause[cause]?.contains(treatmentKey) == true
+    }
+
+    func setSelectedTreatments(for cause: String, treatments: [Treatment]) {
+        let treatmentKeys = Set(treatments.map { $0.name + $0.description })
+        selectedTreatmentsByCause[cause] = treatmentKeys
+
+        // Update overall selected treatments
+        selectedTreatments = Array(Set(selectedTreatments + treatments))
+    }
+
+    func removeTreatment(_ treatment: Treatment) {
+        // Remove from overall list
+        if let index = selectedTreatments.firstIndex(where: { $0.name == treatment.name && $0.description == treatment.description }) {
+            selectedTreatments.remove(at: index)
+        }
+
+        // Remove from cause-specific lists
+        let treatmentKey = treatment.name + treatment.description
+        for (cause, _) in selectedTreatmentsByCause {
+            if selectedTreatmentsByCause[cause]?.contains(treatmentKey) == true {
+                selectedTreatmentsByCause[cause]?.remove(treatmentKey)
+            }
+        }
+    }
+
+    // MARK: - Treatment Retrieval by Category
+    func fetchTreatments(for cause: String, category: String) async -> [Treatment] {
+        let symptoms = confirmedSymptoms.map { $0.symptom }
+
+        // Prepare the query for the specific category
+        let query = """
+        PROVIDE ONLY A VALID JSON ARRAY with exactly 3-5 \(category)-specific treatment options for \(cause), with NO ADDITIONAL TEXT OR EXPLANATION BEFORE OR AFTER THE JSON.
+
+        The JSON structure MUST be exactly:
+        [
+          {
+            "name": "Specific treatment name for \(category) approach",
+            "description": "Detailed explanation of how this \(category) treatment addresses \(cause) in the context of \(symptoms.joined(separator: ", "))",
+            "source": "\(category)",
+            "url": "https://example.com/\(category.lowercased())-treatment or specific \(category) resource",
+            "recommendedQuestions": [
+              "How effective is this \(category) treatment for \(cause) considering \(symptoms.joined(separator: ", "))?",
+              "What are the potential side effects or considerations with this \(category) approach?",
+              "How should I integrate this \(category) treatment with my current medications?"
+            ]
+          }
+        ]
+
+        CRITICAL: Return ONLY the JSON array, nothing else.
+        """
+
+        do {
+            let response: String
+            switch selectedProvider {
+            case .claude:
+                response = try await apiService.chatWithSource(
+                    apiKey: apiKey,
+                    message: query,
+                    treatment: Treatment(
+                        name: "Treatment",
+                        description: "Placeholder",
+                        source: category,
+                        url: "",
+                        recommendedQuestions: ["Question 1", "Question 2", "Question 3"]
+                    ),
+                    symptoms: symptoms,
+                    causes: [cause]
+                )
+            case .gemini:
+                response = try await geminiService.chatWithSource(
+                    apiKey: geminiApiKey,
+                    message: query,
+                    treatment: Treatment(
+                        name: "Treatment",
+                        description: "Placeholder",
+                        source: category,
+                        url: "",
+                        recommendedQuestions: ["Question 1", "Question 2", "Question 3"]
+                    ),
+                    symptoms: symptoms,
+                    causes: [cause]
+                )
+            case .openai:
+                response = try await openaiService.chatWithSource(
+                    apiKey: openaiApiKey,
+                    message: query,
+                    treatment: Treatment(
+                        name: "Treatment",
+                        description: "Placeholder",
+                        source: category,
+                        url: "",
+                        recommendedQuestions: ["Question 1", "Question 2", "Question 3"]
+                    ),
+                    symptoms: symptoms,
+                    causes: [cause]
+                )
+            case .ollama:
+                response = try await ollamaService.chatWithSource(
+                    baseURL: ollamaBaseURL,
+                    model: ollamaModel,
+                    message: query,
+                    treatment: Treatment(
+                        name: "Treatment",
+                        description: "Placeholder",
+                        source: category,
+                        url: "",
+                        recommendedQuestions: ["Question 1", "Question 2", "Question 3"]
+                    ),
+                    symptoms: symptoms,
+                    causes: [cause]
+                )
+            case .appleIntelligence:
+                response = try await appleIntelligenceService.chatWithSource(
+                    message: query,
+                    treatment: Treatment(
+                        name: "Treatment",
+                        description: "Placeholder",
+                        source: category,
+                        url: "",
+                        recommendedQuestions: ["Question 1", "Question 2", "Question 3"]
+                    ),
+                    symptoms: symptoms,
+                    causes: [cause]
+                )
+            }
+
+            // Extract JSON from response
+            var jsonString = response
+            
+            // More robust JSON extraction: find the first [ and the last ]
+            if let startIndex = response.firstIndex(of: "["),
+               let endIndex = response.lastIndex(of: "]") {
+                // Ensure start is before end
+                if startIndex <= endIndex {
+                    jsonString = String(response[startIndex...endIndex])
+                }
+            }
+
+            // Clean up the JSON string to remove any trailing characters or markdown formatting
+            jsonString = jsonString.trimmingCharacters(in: .whitespacesAndNewlines)
+            if jsonString.hasPrefix("```json") {
+                jsonString = String(jsonString.dropFirst(7))
+            } else if jsonString.hasPrefix("```") {
+                jsonString = String(jsonString.dropFirst(3))
+            }
+            if jsonString.hasSuffix("```") {
+                jsonString = String(jsonString.dropLast(3))
+            } else if jsonString.hasSuffix("```json") {
+                jsonString = String(jsonString.dropLast(7))
+            }
+            jsonString = jsonString.trimmingCharacters(in: .whitespacesAndNewlines)
+
+            // Additional cleaning: Remove any remaining text that might be outside the JSON
+            if let startIndex = jsonString.range(of: "[")?.lowerBound,
+               let endIndex = jsonString.range(of: "]", options: .backwards)?.upperBound {
+                jsonString = String(jsonString[startIndex..<endIndex])
+            } else if let startIndex = jsonString.range(of: "{")?.lowerBound,
+                      let endIndex = jsonString.range(of: "}", options: .backwards)?.upperBound {
+                jsonString = String(jsonString[startIndex..<endIndex])
+            }
+
+            guard let jsonData = jsonString.data(using: .utf8) else {
+                addDebugLog("Could not parse treatment response from \(selectedProvider.rawValue)", type: .error)
+                print("Trouble parsing this response as JSON: \(response)")
+                return []
+            }
+
+            let treatments: [Treatment]
+            do {
+                treatments = try JSONDecoder().decode([Treatment].self, from: jsonData)
+
+                // Only return if we got actual treatments
+                if !treatments.isEmpty {
+                    return treatments
+                }
+            } catch {
+                print("JSON parsing error: \(error)")
+                print("Failed to parse this JSON: \(jsonString)")
+            }
+
+            // If JSON parsing failed or returned no results, try to create treatments from the text response
+            return createTreatmentsFromTextResponse(response, category: category, cause: cause, symptoms: symptoms)
+        } catch {
+            addDebugLog("Failed to fetch \(category) treatments for \(cause): \(error.localizedDescription)", type: .error)
+            return []
+        }
+    }
+
 
     // MARK: - Symptom Chat
     func startSymptomChat(with symptom: Symptom) {
@@ -633,7 +870,9 @@ class MedicalAssistantViewModel: ObservableObject {
         additionalSymptoms = session.additionalSymptoms
         potentialCauses = session.potentialCauses
         selectedCauses = session.selectedCauses
-        solutions = session.solutions
+        selectedTreatments = session.selectedTreatments
+        treatmentsByCause = session.treatmentsByCause
+        selectedTreatmentsByCause = session.selectedTreatmentsByCause
         chatMessages = session.chatMessages
         debugLogs = session.debugLogs
         
@@ -657,10 +896,12 @@ class MedicalAssistantViewModel: ObservableObject {
         session.additionalSymptoms = additionalSymptoms
         session.potentialCauses = potentialCauses
         session.selectedCauses = selectedCauses
-        session.solutions = solutions
+        session.selectedTreatments = selectedTreatments
+        session.treatmentsByCause = treatmentsByCause
+        session.selectedTreatmentsByCause = selectedTreatmentsByCause
         session.chatMessages = chatMessages
         session.debugLogs = debugLogs
-        
+
         sessions[index] = session
         saveSessions()
     }
@@ -676,7 +917,9 @@ class MedicalAssistantViewModel: ObservableObject {
             additionalSymptoms = ""
             potentialCauses = nil
             selectedCauses = []
-            solutions = nil
+            selectedTreatments = []
+            treatmentsByCause = [:]
+            selectedTreatmentsByCause = [:]
             chatMessages = [:]
         }
         
@@ -700,9 +943,62 @@ class MedicalAssistantViewModel: ObservableObject {
         additionalSymptoms = ""
         potentialCauses = nil
         selectedCauses = []
-        solutions = nil
         chatMessages = [:]
         debugLogs = []
         selectedTab = 0
     }
+    private func createTreatmentsFromTextResponse(_ response: String, category: String, cause: String, symptoms: [String]) -> [Treatment] {
+        // Extract treatment-like entries from the text response using regex
+        var treatments: [Treatment] = []
+        
+        // Simple regex to find treatment-style entries in the response
+        let treatmentPattern = "(?i)(?:^|\\n)\\s*[-*•]\\s*(.+?)\\.\\s+(.+?)(?=\\n|$)"
+        if let regex = try? NSRegularExpression(pattern: treatmentPattern, options: [.anchorsMatchLines]) {
+            let range = NSRange(location: 0, length: response.utf16.count)
+            let matches = regex.matches(in: response, options: [], range: range)
+            
+            for match in matches.prefix(5) { // Limit to 5 treatments
+                if let nameRange = Range(match.range(at: 1), in: response),
+                   let descRange = Range(match.range(at: 2), in: response) {
+                    let name = String(response[nameRange]).trimmingCharacters(in: .whitespacesAndNewlines)
+                    let description = String(response[descRange]).trimmingCharacters(in: .whitespacesAndNewlines)
+                    
+                    if !name.isEmpty {
+                        let treatment = Treatment(
+                            name: name,
+                            description: description,
+                            source: category,
+                            url: "https://example.com/\(category.lowercased())-treatment",
+                            recommendedQuestions: [
+                                "How effective is this \(category) treatment for \(cause) considering \(symptoms.joined(separator: ", "))?",
+                                "What are the potential side effects or considerations with this \(category) approach?",
+                                "How should I integrate this with my current medications?"
+                            ]
+                        )
+                        treatments.append(treatment)
+                    }
+                }
+            }
+        }
+        
+        // If we still have no treatments, return a basic one extracted from the text
+        if treatments.isEmpty {
+            return [
+                Treatment(
+                    name: "Treatment for \(cause) (\(category))",
+                    description: response.prefix(300) + (response.count > 300 ? "..." : ""),
+                    source: category,
+                    url: "https://example.com/\(category.lowercased())-treatment",
+                    recommendedQuestions: [
+                        "How effective is this \(category) treatment for \(cause)?",
+                        "What are the potential side effects or contraindications?",
+                        "How should I integrate this with my current medications?"
+                    ]
+                )
+            ]
+        }
+        
+        return treatments
+    }
 }
+
