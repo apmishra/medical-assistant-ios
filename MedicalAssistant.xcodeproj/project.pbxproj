@@ -16,6 +16,9 @@
 		311436432ED025DB00133BEC /* SessionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 311436402ED025DB00133BEC /* SessionsView.swift */; };
 		311436452ED02F3200133BEC /* OllamaAPIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 311436442ED02F3200133BEC /* OllamaAPIService.swift */; };
 		311436492ED0E9DA00133BEC /* AppleIntelligenceService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 311436482ED0E9DA00133BEC /* AppleIntelligenceService.swift */; };
+		3114364B2ED1569800133BEC /* AuthenticationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3114364A2ED1569800133BEC /* AuthenticationService.swift */; };
+		3114364D2ED156A200133BEC /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3114364C2ED156A200133BEC /* LoginView.swift */; };
+		3114364F2ED15F1500133BEC /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3114364E2ED15F1500133BEC /* HomeView.swift */; };
 		FA0000010000000000000001 /* MedicalAssistantApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000020000000000000001 /* MedicalAssistantApp.swift */; };
 		FA0000030000000000000001 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000040000000000000001 /* ContentView.swift */; };
 		FA0000050000000000000001 /* MedicalModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000060000000000000001 /* MedicalModels.swift */; };
@@ -43,6 +46,9 @@
 		311436442ED02F3200133BEC /* OllamaAPIService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OllamaAPIService.swift; sourceTree = "<group>"; };
 		311436462ED051C300133BEC /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		311436482ED0E9DA00133BEC /* AppleIntelligenceService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleIntelligenceService.swift; sourceTree = "<group>"; };
+		3114364A2ED1569800133BEC /* AuthenticationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthenticationService.swift; sourceTree = "<group>"; };
+		3114364C2ED156A200133BEC /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
+		3114364E2ED15F1500133BEC /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
 		FA0000020000000000000001 /* MedicalAssistantApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MedicalAssistantApp.swift; sourceTree = "<group>"; };
 		FA0000040000000000000001 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		FA0000060000000000000001 /* MedicalModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MedicalModels.swift; sourceTree = "<group>"; };
@@ -102,6 +108,8 @@
 		FA0000320000000000000001 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				3114364E2ED15F1500133BEC /* HomeView.swift */,
+				3114364C2ED156A200133BEC /* LoginView.swift */,
 				311436402ED025DB00133BEC /* SessionsView.swift */,
 				311436412ED025DB00133BEC /* SplashView.swift */,
 				3114363E2ED021D000133BEC /* CauseChatView.swift */,
@@ -130,6 +138,7 @@
 		FA0000340000000000000001 /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				3114364A2ED1569800133BEC /* AuthenticationService.swift */,
 				311436482ED0E9DA00133BEC /* AppleIntelligenceService.swift */,
 				311436442ED02F3200133BEC /* OllamaAPIService.swift */,
 				3114363A2ED01FCD00133BEC /* GeminiAPIService.swift */,
@@ -214,9 +223,11 @@
 				FA0000010000000000000001 /* MedicalAssistantApp.swift in Sources */,
 				FA0000030000000000000001 /* ContentView.swift in Sources */,
 				FA0000050000000000000001 /* MedicalModels.swift in Sources */,
+				3114364F2ED15F1500133BEC /* HomeView.swift in Sources */,
 				3114363D2ED0204800133BEC /* SymptomChatView.swift in Sources */,
 				FA0000070000000000000001 /* ClaudeAPIService.swift in Sources */,
 				FA0000090000000000000001 /* MedicalAssistantViewModel.swift in Sources */,
+				3114364D2ED156A200133BEC /* LoginView.swift in Sources */,
 				3114363B2ED01FCD00133BEC /* GeminiAPIService.swift in Sources */,
 				FA0000110000000000000001 /* UploadView.swift in Sources */,
 				FA0000130000000000000001 /* SymptomsView.swift in Sources */,
@@ -233,6 +244,7 @@
 				FA0000210000000000000001 /* DebugView.swift in Sources */,
 				FA0000230000000000000001 /* ChatView.swift in Sources */,
 				FA0000250000000000000001 /* APIKeyInputView.swift in Sources */,
+				3114364B2ED1569800133BEC /* AuthenticationService.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

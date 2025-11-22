@@ -23,12 +23,17 @@ From now on, act as my expert assistant with access to all your reasoning and kn
 I never give vague answers. If the question is broad, I break it into parts. I act like a professional in the relevant domain and push my reasoning to 100% of my capacity.
 """
     
+    // LLM Tuning Parameters
+    var temperature: Double = 0.7
+    var maxTokens: Int = 2048
+    var topP: Double = 1.0
+    var customSystemPrompt: String = ""
+    
     private init() {}
     
     func callGemini(apiKey: String, prompt: String, context: String = "") async throws -> String {
         // Using gemini-2.0-flash-exp (Gemini 2.0 Flash Experimental)
         let urlString = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key=\(apiKey)"
-//        "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=\(apiKey)"
             
         guard let url = URL(string: urlString) else {
             throw NSError(domain: "GeminiAPI", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid URL"])
@@ -39,15 +44,24 @@ I never give vague answers. If the question is broad, I break it into parts. I a
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         
         let fullPrompt = context.isEmpty ? prompt : "\(context)\n\n\(prompt)"
+        var currentSystemPrompt = systemPrompt
+        if !customSystemPrompt.isEmpty {
+            currentSystemPrompt = customSystemPrompt + "\n\n" + systemPrompt
+        }
         
         // Gemini Request Body
         let requestBody: [String: Any] = [
             "contents": [
                 [
                     "parts": [
-                        ["text": "\(systemPrompt)\n\n\(fullPrompt)"]
+                        ["text": "\(currentSystemPrompt)\n\n\(fullPrompt)"]
                     ]
                 ]
+            ],
+            "generationConfig": [
+                "temperature": temperature,
+                "maxOutputTokens": maxTokens,
+                "topP": topP
             ]
         ]
         
@@ -135,10 +149,22 @@ I never give vague answers. If the question is broad, I break it into parts. I a
             context: "Symptoms: \(symptomsText)"
         )
         
-        var cleanResponse = response.replacingOccurrences(of: "```json", with: "")
-        cleanResponse = cleanResponse.replacingOccurrences(of: "```", with: "")
+        // Multi-strategy JSON extraction
+        var jsonString = response
         
-        guard let jsonData = cleanResponse.data(using: .utf8) else {
+        // Strategy 1: Try regex extraction for JSON object
+        if let jsonRange = response.range(of: "\\{[\\s\\S]*\\}", options: .regularExpression) {
+            jsonString = String(response[jsonRange])
+        } 
+        // Strategy 2: If no match, try removing markdown blocks (original method)
+        else {
+            jsonString = response
+                .replacingOccurrences(of: "```json", with: "")
+                .replacingOccurrences(of: "```", with: "")
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        
+        guard let jsonData = jsonString.data(using: .utf8) else {
             throw NSError(domain: "GeminiAPI", code: -1, userInfo: [NSLocalizedDescriptionKey: "Could not parse causes from response"])
         }
         
@@ -147,17 +173,59 @@ I never give vague answers. If the question is broad, I break it into parts. I a
     }
     
     func findSolutions(apiKey: String, conditions: [String]) async throws -> SolutionsResponse {
-        let conditionsText = conditions.joined(separator: ", ")
+        let conditionsText = conditions.joined(separator: "\", \"")
         let response = try await callGemini(
             apiKey: apiKey,
-            prompt: "For these conditions, provide treatment approaches in Common Sense, Allopathic, Ayurvedic, Naturopathic, Homeopathic, and Unani medicine. Include reputable sources. Format as JSON: {\"solutions\": [{\"category\": \"Common Sense|Allopathic|Ayurvedic|Naturopathic|Homeopathic|Unani\", \"treatments\": [{\"name\": \"treatment\", \"description\": \"how it works\", \"source\": \"source name\", \"url\": \"URL\", \"recommendedQuestions\": [\"q1\", \"q2\"]}]}]}. Return ONLY JSON. Do not wrap in markdown code blocks.",
+            prompt: """
+            For EACH of the following conditions, provide treatment approaches organized by medical system.
+            
+            Conditions: ["\(conditionsText)"]
+            
+            For EACH condition, provide treatments in these 6 medical systems:
+            1. General (General advice, lifestyle changes, or treatments that don't fit other categories)
+            2. Allopathic (Modern medicine)
+            3. Ayurvedic
+            4. Naturopathic
+            5. Homeopathic
+            6. Unani
+            
+            Structure the response as an array where each element represents ONE condition.
+            
+            Format strictly as JSON:
+            {
+              "solutions": [
+                {
+                  "causeName": "Condition Name",
+                  "systems": [
+                    {
+                      "category": "Allopathic",
+                      "treatments": [{"name": "Name", "description": "Desc", "source": "Source", "url": "", "recommendedQuestions": ["Q1"]}]
+                    }
+                  ]
+                }
+              ]
+            }
+            Return ONLY JSON. Do not wrap in markdown code blocks.
+            """,
             context: "Conditions: \(conditionsText)"
         )
         
-        var cleanResponse = response.replacingOccurrences(of: "```json", with: "")
-        cleanResponse = cleanResponse.replacingOccurrences(of: "```", with: "")
+        // Multi-strategy JSON extraction
+        var jsonString = response
         
-        guard let jsonData = cleanResponse.data(using: .utf8) else {
+        // Strategy 1: Try regex extraction for JSON object
+        if let jsonRange = response.range(of: "\\{[\\s\\S]*\\}", options: .regularExpression) {
+            jsonString = String(response[jsonRange])
+        } 
+        // Strategy 2: If no match, try removing markdown blocks (original method)
+        else {
+            jsonString = response
+                .replacingOccurrences(of: "```json", with: "")
+                .replacingOccurrences(of: "```", with: "")
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        
+        guard let jsonData = jsonString.data(using: .utf8) else {
             throw NSError(domain: "GeminiAPI", code: -1, userInfo: [NSLocalizedDescriptionKey: "Could not parse solutions from response"])
         }
         
@@ -165,12 +233,15 @@ I never give vague answers. If the question is broad, I break it into parts. I a
         return try decoder.decode(SolutionsResponse.self, from: jsonData)
     }
     
-    func chatWithSource(apiKey: String, message: String, treatment: Treatment) async throws -> String {
-        return try await callGemini(
-            apiKey: apiKey,
-            prompt: message,
-            context: "Source: \(treatment.name)\nDescription: \(treatment.description)\nURL: \(treatment.url)"
-        )
+    func chatWithSource(apiKey: String, message: String, treatment: Treatment, symptoms: [String] = [], causes: [String] = []) async throws -> String {
+        var contextParts: [String] = []
+        if !symptoms.isEmpty { contextParts.append("Patient Symptoms: \(symptoms.joined(separator: ", "))") }
+        if !causes.isEmpty { contextParts.append("Potential Causes: \(causes.joined(separator: ", "))") }
+        contextParts.append("Treatment: \(treatment.name)")
+        contextParts.append("Description: \(treatment.description)")
+        contextParts.append("URL: \(treatment.url)") // Added URL to context
+        let context = contextParts.joined(separator: "\n")
+        return try await callGemini(apiKey: apiKey, prompt: message, context: context)
     }
     
     func chatAboutSymptom(apiKey: String, message: String, symptom: Symptom) async throws -> String {

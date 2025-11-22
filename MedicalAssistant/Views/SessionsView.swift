@@ -33,9 +33,19 @@ struct SessionsView: View {
                                 .font(.headline)
                                 .foregroundColor(.primary)
                             
-                            Text(session.date.formatted(date: .abbreviated, time: .shortened))
-                                .font(.caption)
-                                .foregroundColor(.secondary)
+                            HStack(spacing: 8) {
+                                Text(session.date.formatted(date: .abbreviated, time: .shortened))
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                
+                                Text("•")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                
+                                Text(session.authProvider)
+                                    .font(.caption)
+                                    .foregroundColor(.blue)
+                            }
                         }
                         
                         Spacer()
@@ -53,6 +63,10 @@ struct SessionsView: View {
                         newName = session.name
                     }) {
                         Label("Rename", systemImage: "pencil")
+                    }
+                    
+                    ShareLink(item: session.toCSV(), preview: SharePreview(session.name + ".csv")) {
+                        Label("Export CSV", systemImage: "square.and.arrow.up")
                     }
                     
                     Button(role: .destructive, action: {
@@ -75,6 +89,11 @@ struct SessionsView: View {
                         Label("Rename", systemImage: "pencil")
                     }
                     .tint(.orange)
+                    
+                    ShareLink(item: session.toCSV(), preview: SharePreview(session.name + ".csv")) {
+                        Label("Export", systemImage: "square.and.arrow.up")
+                    }
+                    .tint(.blue)
                 }
             }
         }

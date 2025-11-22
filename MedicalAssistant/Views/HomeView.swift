@@ -1,41 +1,50 @@
 //
-//  SplashView.swift
+//  HomeView.swift
 //  MedicalAssistant
 //
-//  Created by Claude
+//  Created by Barbarik
 //
 
 import SwiftUI
 
-struct SplashView: View {
+struct HomeView: View {
     @EnvironmentObject var viewModel: MedicalAssistantViewModel
     @EnvironmentObject var authService: AuthenticationService
     @State private var showSessions = false
-    @State private var showLogin = false
-
+    
+    var providerSessions: [MedicalSession] {
+        guard let provider = authService.userId else { return [] }
+        return viewModel.sessions.filter { $0.authProvider == provider }
+    }
+    
     var body: some View {
         VStack(spacing: 30) {
             Spacer()
-
-            Image(systemName: "cross.case.fill")
-                .resizable()
-                .scaledToFit()
-                .frame(width: 100, height: 100)
-                .foregroundColor(.blue)
-
-            Text("AI Opinion")
-                .font(.largeTitle)
-                .bold()
-
-            Text("General Findings")
-                .font(.title3)
-                .foregroundColor(.secondary)
-
-            Spacer()
-
-            if authService.isAuthenticated {
+            
+            // Logo and Welcome
+            VStack(spacing: 20) {
+                Image(systemName: "cross.case.fill")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 100, height: 100)
+                    .foregroundColor(.blue)
+                
+                Text("Welcome")
+                    .font(.largeTitle)
+                    .bold()
+                
+                if let provider = authService.userId {
+                    Text("Logged in with \(provider)")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                }
+            }
+            .padding(.bottom, 40)
+            
+            // Action Buttons
+            VStack(spacing: 16) {
                 Button(action: {
-                    viewModel.createNewSession()
+                    viewModel.createNewSession(provider: authService.userId ?? "Unknown")
                 }) {
                     HStack {
                         Image(systemName: "plus.circle.fill")
@@ -49,14 +58,14 @@ struct SplashView: View {
                     .cornerRadius(12)
                 }
                 .padding(.horizontal, 40)
-
-                if !viewModel.sessions.isEmpty {
+                
+                if !providerSessions.isEmpty {
                     Button(action: {
                         showSessions = true
                     }) {
                         HStack {
                             Image(systemName: "clock.arrow.circlepath")
-                            Text("View Previous Sessions")
+                            Text("View Previous Sessions (\(providerSessions.count))")
                                 .font(.headline)
                         }
                         .frame(maxWidth: .infinity)
@@ -67,32 +76,27 @@ struct SplashView: View {
                     }
                     .padding(.horizontal, 40)
                 }
-            } else {
-                Button(action: {
-                    showLogin = true
-                }) {
-                    HStack {
-                        Image(systemName: "person.circle.fill")
-                        Text("Log In / Sign Up")
-                            .font(.headline)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(Color.blue)
-                    .foregroundColor(.white)
-                    .cornerRadius(12)
-                }
-                .padding(.horizontal, 40)
             }
-
+            
             Spacer()
+            
+            // Logout Button
+            Button(action: {
+                viewModel.clearCurrentSession()
+                authService.signOut()
+            }) {
+                Text("Log Out")
+                    .font(.headline)
+                    .foregroundColor(.red)
+            }
+            .padding(.bottom, 20)
         }
         .padding()
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(
             Rectangle()
                 .fill(.ultraThinMaterial)
-                .opacity(0.85) // Adjust opacity to make it more translucent
+                .opacity(0.85)
         )
         .ignoresSafeArea()
         .sheet(isPresented: $showSessions) {
@@ -106,9 +110,6 @@ struct SplashView: View {
                         }
                     }
             }
-        }
-        .fullScreenCover(isPresented: $showLogin) {
-            LoginView()
         }
     }
 }

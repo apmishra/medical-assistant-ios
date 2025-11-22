@@ -27,6 +27,12 @@ class MedicalAssistantViewModel: ObservableObject {
     @Published var openaiApiKey: String = ""
     @Published var ollamaBaseURL: String = "http://localhost:11434"
     @Published var ollamaModel: String = "llama3"
+    
+    // LLM Tuning Parameters
+    @Published var temperature: Double = 0.7
+    @Published var maxTokens: Int = 2048
+    @Published var topP: Double = 1.0
+    @Published var customSystemPrompt: String = ""
     @Published var pdfText: String = "" { didSet { updateCurrentSession() } }
     @Published var manualText: String = "" { didSet { updateCurrentSession() } }
     @Published var extractedSymptoms: [Symptom] = [] { didSet { updateCurrentSession() } }
@@ -61,12 +67,17 @@ class MedicalAssistantViewModel: ObservableObject {
     private let openaiApiKeyStorageKey = "openai_api_key"
     private let ollamaBaseURLStorageKey = "ollama_base_url"
     private let ollamaModelStorageKey = "ollama_model"
+    private let temperatureStorageKey = "llm_temperature"
+    private let maxTokensStorageKey = "llm_max_tokens"
+    private let topPStorageKey = "llm_top_p"
+    private let customSystemPromptStorageKey = "llm_custom_system_prompt"
 
     init() {
         loadAPIKey()
         loadSessions()
     }
 
+    // MARK: - API Key Management
     // MARK: - API Key Management
     func loadAPIKey() {
         // Load selected provider
@@ -95,7 +106,25 @@ class MedicalAssistantViewModel: ObservableObject {
             ollamaModel = storedOllamaModel
         }
         
+        loadTuningParameters(for: selectedProvider)
+        syncTuningParametersToServices()
         checkAPIKeyStatus()
+    }
+    
+    private func getStorageKey(for provider: LLMProvider, key: String) -> String {
+        return "\(provider.rawValue.lowercased())_\(key)"
+    }
+    
+    private func loadTuningParameters(for provider: LLMProvider) {
+        let tempKey = getStorageKey(for: provider, key: "temperature")
+        let maxTokensKey = getStorageKey(for: provider, key: "max_tokens")
+        let topPKey = getStorageKey(for: provider, key: "top_p")
+        let systemPromptKey = getStorageKey(for: provider, key: "custom_system_prompt")
+        
+        temperature = UserDefaults.standard.object(forKey: tempKey) as? Double ?? 0.7
+        maxTokens = UserDefaults.standard.object(forKey: maxTokensKey) as? Int ?? 2048
+        topP = UserDefaults.standard.object(forKey: topPKey) as? Double ?? 1.0
+        customSystemPrompt = UserDefaults.standard.string(forKey: systemPromptKey) ?? ""
     }
     
     func checkAPIKeyStatus() {
@@ -119,6 +148,7 @@ class MedicalAssistantViewModel: ObservableObject {
     func saveProvider(_ provider: LLMProvider) {
         selectedProvider = provider
         UserDefaults.standard.set(provider.rawValue, forKey: providerStorageKey)
+        loadTuningParameters(for: provider)
         checkAPIKeyStatus()
     }
 
@@ -154,6 +184,71 @@ class MedicalAssistantViewModel: ObservableObject {
         ollamaModel = model
         if selectedProvider == .ollama { showApiKeyInput = false }
         addDebugLog("Ollama configuration saved", type: .success)
+    }
+    
+    func saveLLMTuningParameters(temperature: Double, maxTokens: Int, topP: Double, customSystemPrompt: String) {
+        let provider = selectedProvider
+        let tempKey = getStorageKey(for: provider, key: "temperature")
+        let maxTokensKey = getStorageKey(for: provider, key: "max_tokens")
+        let topPKey = getStorageKey(for: provider, key: "top_p")
+        let systemPromptKey = getStorageKey(for: provider, key: "custom_system_prompt")
+        
+        UserDefaults.standard.set(temperature, forKey: tempKey)
+        UserDefaults.standard.set(maxTokens, forKey: maxTokensKey)
+        UserDefaults.standard.set(topP, forKey: topPKey)
+        UserDefaults.standard.set(customSystemPrompt, forKey: systemPromptKey)
+        
+        self.temperature = temperature
+        self.maxTokens = maxTokens
+        self.topP = topP
+        self.customSystemPrompt = customSystemPrompt
+        
+        syncTuningParametersToServices()
+        addDebugLog("\(provider.rawValue) tuning parameters saved", type: .success)
+    }
+    
+    private func syncTuningParametersToServices() {
+        // Helper to load params for a specific provider without affecting current UI state
+        func getParams(for provider: LLMProvider) -> (Double, Int, Double, String) {
+            let tempKey = getStorageKey(for: provider, key: "temperature")
+            let maxTokensKey = getStorageKey(for: provider, key: "max_tokens")
+            let topPKey = getStorageKey(for: provider, key: "top_p")
+            let systemPromptKey = getStorageKey(for: provider, key: "custom_system_prompt")
+            
+            let t = UserDefaults.standard.object(forKey: tempKey) as? Double ?? 0.7
+            let m = UserDefaults.standard.object(forKey: maxTokensKey) as? Int ?? 2048
+            let p = UserDefaults.standard.object(forKey: topPKey) as? Double ?? 1.0
+            let s = UserDefaults.standard.string(forKey: systemPromptKey) ?? ""
+            return (t, m, p, s)
+        }
+        
+        // Sync to Claude
+        let claudeParams = getParams(for: .claude)
+        apiService.temperature = claudeParams.0
+        apiService.maxTokens = claudeParams.1
+        apiService.topP = claudeParams.2
+        apiService.customSystemPrompt = claudeParams.3
+        
+        // Sync to Gemini
+        let geminiParams = getParams(for: .gemini)
+        geminiService.temperature = geminiParams.0
+        geminiService.maxTokens = geminiParams.1
+        geminiService.topP = geminiParams.2
+        geminiService.customSystemPrompt = geminiParams.3
+        
+        // Sync to OpenAI
+        let openaiParams = getParams(for: .openai)
+        openaiService.temperature = openaiParams.0
+        openaiService.maxTokens = openaiParams.1
+        openaiService.topP = openaiParams.2
+        openaiService.customSystemPrompt = openaiParams.3
+        
+        // Sync to Ollama
+        let ollamaParams = getParams(for: .ollama)
+        ollamaService.temperature = ollamaParams.0
+        ollamaService.maxTokens = ollamaParams.1
+        ollamaService.topP = ollamaParams.2
+        ollamaService.customSystemPrompt = ollamaParams.3
     }
 
     // MARK: - Debug Logging
@@ -333,6 +428,14 @@ class MedicalAssistantViewModel: ObservableObject {
         activeChatTreatment = treatment
         if chatMessages[treatment.name] == nil {
             chatMessages[treatment.name] = []
+            
+            // Add welcome message only
+            let welcomeMessage = ChatMessage(
+                role: .assistant,
+                content: "I can help you learn more about \(treatment.name). I have context about your symptoms and potential causes. Feel free to ask any questions!",
+                timestamp: Date()
+            )
+            chatMessages[treatment.name, default: []].append(welcomeMessage)
         }
     }
 
@@ -345,18 +448,22 @@ class MedicalAssistantViewModel: ObservableObject {
         addDebugLog("Chat query sent for \(treatment.name)", type: .info)
 
         do {
+            // Prepare context
+            let symptoms = confirmedSymptoms.map { $0.symptom }
+            let causes = Array(selectedCauses).map { $0.condition }
+            
             let response: String
             switch selectedProvider {
             case .claude:
-                response = try await apiService.chatWithSource(apiKey: apiKey, message: message, treatment: treatment)
+                response = try await apiService.chatWithSource(apiKey: apiKey, message: message, treatment: treatment, symptoms: symptoms, causes: causes)
             case .gemini:
-                response = try await geminiService.chatWithSource(apiKey: geminiApiKey, message: message, treatment: treatment)
+                response = try await geminiService.chatWithSource(apiKey: geminiApiKey, message: message, treatment: treatment, symptoms: symptoms, causes: causes)
             case .openai:
-                response = try await openaiService.chatWithSource(apiKey: openaiApiKey, message: message, treatment: treatment)
+                response = try await openaiService.chatWithSource(apiKey: openaiApiKey, message: message, treatment: treatment, symptoms: symptoms, causes: causes)
             case .ollama:
-                response = try await ollamaService.chatWithSource(baseURL: ollamaBaseURL, model: ollamaModel, message: message, treatment: treatment)
+                response = try await ollamaService.chatWithSource(baseURL: ollamaBaseURL, model: ollamaModel, message: message, treatment: treatment, symptoms: symptoms, causes: causes)
             case .appleIntelligence:
-                response = try await appleIntelligenceService.chatWithSource(message: message, treatment: treatment)
+                response = try await appleIntelligenceService.chatWithSource(message: message, treatment: treatment, symptoms: symptoms, causes: causes)
             }
             
             let assistantMessage = ChatMessage(role: .assistant, content: response, timestamp: Date())
@@ -495,13 +602,16 @@ class MedicalAssistantViewModel: ObservableObject {
         }
     }
     
-    func createNewSession() {
+    func createNewSession(provider: String = "Unknown") {
         // Save current session if exists before creating new one
         if currentSessionId != nil {
             updateCurrentSession()
         }
         
-        let newSession = MedicalSession(name: "Session \(Date().formatted(date: .abbreviated, time: .shortened))")
+        let newSession = MedicalSession(
+            name: "Session \(Date().formatted(date: .abbreviated, time: .shortened))",
+            authProvider: provider
+        )
         sessions.insert(newSession, at: 0)
         saveSessions()
         loadSession(newSession)
@@ -579,5 +689,20 @@ class MedicalAssistantViewModel: ObservableObject {
         guard let index = sessions.firstIndex(where: { $0.id == session.id }) else { return }
         sessions[index].name = newName
         saveSessions()
+    }
+    
+    func clearCurrentSession() {
+        currentSessionId = nil
+        pdfText = ""
+        manualText = ""
+        extractedSymptoms = []
+        confirmedSymptoms = []
+        additionalSymptoms = ""
+        potentialCauses = nil
+        selectedCauses = []
+        solutions = nil
+        chatMessages = [:]
+        debugLogs = []
+        selectedTab = 0
     }
 }

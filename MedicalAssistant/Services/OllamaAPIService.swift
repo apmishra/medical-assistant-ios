@@ -10,6 +10,12 @@ import PDFKit
 
 class OllamaAPIService {
     static let shared = OllamaAPIService()
+    // LLM Tuning Parameters
+    var temperature: Double = 0.7
+    var maxTokens: Int = 2048
+    var topP: Double = 1.0
+    var customSystemPrompt: String = ""
+    
     private init() {}
     
     // MARK: - PDF Extraction (Local using PDFKit)
@@ -45,14 +51,30 @@ class OllamaAPIService {
         request.addValue("application/json", forHTTPHeaderField: "Content-Type")
         
         var apiMessages = messages
-        if let system = systemPrompt {
+        
+        // Handle System Prompt (Prepend custom if available)
+        var effectiveSystemPrompt = systemPrompt
+        if !customSystemPrompt.isEmpty {
+            if let existing = effectiveSystemPrompt {
+                effectiveSystemPrompt = customSystemPrompt + "\n\n" + existing
+            } else {
+                effectiveSystemPrompt = customSystemPrompt
+            }
+        }
+        
+        if let system = effectiveSystemPrompt {
             apiMessages.insert(["role": "system", "content": system], at: 0)
         }
         
         let body: [String: Any] = [
             "model": model,
             "messages": apiMessages,
-            "stream": false
+            "stream": false,
+            "options": [
+                "temperature": temperature,
+                "num_predict": maxTokens, // Ollama uses num_predict for max tokens
+                "top_p": topP
+            ]
         ]
         
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
@@ -158,11 +180,27 @@ class OllamaAPIService {
         
         let response = try await callOllama(baseURL: baseURL, model: model, messages: [["role": "user", "content": userMessage]], systemPrompt: systemPrompt)
         
-        let cleanResponse = response.replacingOccurrences(of: "```json", with: "")
-                                   .replacingOccurrences(of: "```", with: "")
-                                   .trimmingCharacters(in: .whitespacesAndNewlines)
+        // Multi-strategy JSON extraction
+        var jsonString = response
         
-        guard let data = cleanResponse.data(using: .utf8) else {
+        // Strategy 1: Try regex extraction for JSON object
+        if let jsonRange = response.range(of: "\\{[\\s\\S]*\\}", options: .regularExpression) {
+            jsonString = String(response[jsonRange])
+        } 
+        // Strategy 2: If no match, try removing markdown blocks (original method)
+        else {
+            jsonString = response
+                .replacingOccurrences(of: "```json", with: "")
+                .replacingOccurrences(of: "```", with: "")
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        
+        // Strategy 3: Check for array format and wrap it
+        if jsonString.hasPrefix("[") {
+            jsonString = "{ \"causes\": \(jsonString) }"
+        }
+        
+        guard let data = jsonString.data(using: .utf8) else {
              throw NSError(domain: "OllamaAPIService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid response encoding"])
         }
         
@@ -199,73 +237,131 @@ class OllamaAPIService {
             
             return CausesResponse(causes: validCauses)
         } catch {
-            print("Failed to parse causes. Raw response: \(cleanResponse)")
-            throw NSError(domain: "OllamaAPIService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to parse causes. Raw output: \(cleanResponse)"])
+            print("=== OLLAMA PARSING ERROR ===")
+            print("Full response length: \(response.count) characters")
+            print("Full response: \(response)")
+            print("Extracted JSON: \(jsonString)")
+            print("Parse error: \(error)")
+            print("=========================")
+            throw NSError(domain: "OllamaAPIService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to parse causes. The response may be truncated. Try increasing max tokens in settings. Error: \(error.localizedDescription)"])
         }
     }
     
     func findSolutions(baseURL: String, model: String, conditions: [String]) async throws -> SolutionsResponse {
         let systemPrompt = """
-        You are a medical AI assistant. For the provided medical conditions, suggest treatments and management strategies.
-        Return ONLY a JSON object with a "solutions" key containing an array of objects. Each object should have:
-        - "category": Category name (e.g., Common Sense, Allopathic, Ayurvedic, Naturopathic, Homeopathic, Unani)
-        - "treatments": Array of treatment objects, each containing:
-            - "name": Name of the treatment
-            - "description": How it works
-            - "source": Source name
-            - "url": URL to source
-            - "recommendedQuestions": Array of questions to ask a doctor
+        Return ONLY valid JSON, no explanatory text.
         
-        Example format:
+        For EACH condition, provide treatments organized by medical system.
+        
+        CRITICAL: Each treatment MUST be a JSON object with these 5 fields:
+        - "name": Treatment name
+        - "description": Single-line description
+        - "source": Source name
+        - "url": URL or empty string
+        - "recommendedQuestions": Array of 2-3 questions
+        
+        Provide treatments for ALL 5 medical systems per condition:
+        1. Allopathic (modern medicine)
+        2. Ayurvedic
+        3. Naturopathic
+        4. Homeopathic
+        5. Unani
+        
+        Structure: Array where each element is ONE condition with its systems.
+        
+        Example:
         {
           "solutions": [
             {
-              "category": "Allopathic",
-              "treatments": [
+              "causeName": "Condition Name",
+              "systems": [
                 {
-                  "name": "Ibuprofen",
-                  "description": "Anti-inflammatory pain reliever",
-                  "source": "Mayo Clinic",
-                  "url": "https://www.mayoclinic.org",
-                  "recommendedQuestions": ["Dosage?", "Side effects?"]
+                  "category": "Allopathic",
+                  "treatments": [
+                    {
+                      "name": "Treatment Name",
+                      "description": "Description",
+                      "source": "Medical Guidance",
+                      "url": "",
+                      "recommendedQuestions": ["Q1", "Q2"]
+                    }
+                  ]
                 }
               ]
             }
           ]
         }
-        
-        Do not include any markdown formatting.
         """
         
         let userMessage = "Provide solutions for these conditions: \(conditions.joined(separator: ", "))"
         
         let response = try await callOllama(baseURL: baseURL, model: model, messages: [["role": "user", "content": userMessage]], systemPrompt: systemPrompt)
         
-        let cleanResponse = response.replacingOccurrences(of: "```json", with: "")
-                                   .replacingOccurrences(of: "```", with: "")
-                                   .trimmingCharacters(in: .whitespacesAndNewlines)
+        // Multi-strategy JSON extraction
+        var jsonString = response
         
-        guard let data = cleanResponse.data(using: .utf8) else {
+        // Strategy 1: Try regex extraction for JSON object
+        if let jsonRange = response.range(of: "\\{[\\s\\S]*\\}", options: .regularExpression) {
+            jsonString = String(response[jsonRange])
+        } 
+        // Strategy 2: If no match, try removing markdown blocks (original method)
+        else {
+            jsonString = response
+                .replacingOccurrences(of: "```json", with: "")
+                .replacingOccurrences(of: "```", with: "")
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        
+        guard let data = jsonString.data(using: .utf8) else {
              throw NSError(domain: "OllamaAPIService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid response encoding"])
         }
         
         do {
+            // Try direct decoding first
             return try JSONDecoder().decode(SolutionsResponse.self, from: data)
-        } catch {
-            print("Failed to parse solutions. Raw response: \(cleanResponse)")
-            throw NSError(domain: "OllamaAPIService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to parse solutions. Raw output: \(cleanResponse)"])
+        } catch let decodingError {
+            print("Failed to parse solutions directly. Error: \(decodingError)")
+            print("Raw response: \(jsonString)")
+            
+            // Fallback: Create a simple solution from the conditions
+            print("Creating fallback solution...")
+            let fallbackSolutions = conditions.map { condition in
+                let fallbackTreatment = Treatment(
+                    name: "Consult Healthcare Provider about \(condition)",
+                    description: "Please consult with a qualified healthcare provider for proper diagnosis and treatment of \(condition).",
+                    source: "Medical Guidance",
+                    url: "",
+                    recommendedQuestions: [
+                        "What tests are needed to confirm this condition?",
+                        "What are the treatment options available?",
+                        "What lifestyle changes should I consider?"
+                    ]
+                )
+                
+                let fallbackCategory = SolutionCategory(
+                    category: "Medical Consultation",
+                    treatments: [fallbackTreatment]
+                )
+                
+                return CauseSolution(
+                    causeName: condition,
+                    systems: [fallbackCategory]
+                )
+            }
+            
+            return SolutionsResponse(solutions: fallbackSolutions)
         }
     }
     
     // MARK: - Chat Functions
     
-    func chatWithSource(baseURL: String, model: String, message: String, treatment: Treatment) async throws -> String {
-        let systemPrompt = """
-        You are a helpful medical assistant. You are discussing the treatment plan for \(treatment.name).
-        Answer the user's questions specifically about this treatment, its side effects, usage, and effectiveness.
-        Keep answers concise and informative.
-        """
-        
+    func chatWithSource(baseURL: String, model: String, message: String, treatment: Treatment, symptoms: [String] = [], causes: [String] = []) async throws -> String {
+        var contextParts: [String] = []
+        if !symptoms.isEmpty { contextParts.append("Patient Symptoms: \(symptoms.joined(separator: ", "))") }
+        if !causes.isEmpty { contextParts.append("Potential Causes: \(causes.joined(separator: ", "))") }
+        contextParts.append("Treatment: \(treatment.name)")
+        contextParts.append("Description: \(treatment.description)")
+        let systemPrompt = "You are a helpful medical assistant. Answer questions about this treatment.\n\n" + contextParts.joined(separator: "\n")
         return try await callOllama(baseURL: baseURL, model: model, messages: [["role": "user", "content": message]], systemPrompt: systemPrompt)
     }
     

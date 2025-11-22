@@ -19,13 +19,17 @@ From now on, act as my expert assistant with access to all your reasoning and kn
 2. A step-by-step explanation of how I got there.
 3. Alternative perspectives or solutions you might not have thought of.
 4. A practical summary or action plan you can apply immediately.
-
-I never give vague answers. If the question is broad, I break it into parts. I act like a professional in the relevant domain and push my reasoning to 100% of my capacity.
 """
+
+    // LLM Tuning Parameters
+    var temperature: Double = 0.7
+    var maxTokens: Int = 2048
+    var topP: Double = 1.0
+    var customSystemPrompt: String = ""
 
     private init() {}
 
-    func callClaude(apiKey: String, prompt: String, context: String = "") async throws -> String {
+    private func callClaude(apiKey: String, prompt: String, context: String = "") async throws -> String {
         let url = URL(string: "https://api.anthropic.com/v1/messages")!
 
         var request = URLRequest(url: url)
@@ -34,14 +38,18 @@ I never give vague answers. If the question is broad, I break it into parts. I a
         request.setValue(apiKey, forHTTPHeaderField: "x-api-key")
         request.setValue("2023-06-01", forHTTPHeaderField: "anthropic-version")
 
-        let fullPrompt = context.isEmpty ? prompt : "\(context)\n\n\(prompt)"
+        var systemMessage = context.isEmpty ? "You are a helpful medical AI assistant." : "You are a helpful medical AI assistant.\n\nContext:\n\(context)"
+        if !customSystemPrompt.isEmpty {
+            systemMessage = customSystemPrompt + "\n\n" + systemMessage
+        }
 
         // Create request body without apiKey
         let requestBody = ClaudeAPIRequestBody(
-            model: "claude-sonnet-4-20250514",
-            maxTokens: 4096,
-            system: systemPrompt,
-            messages: [ClaudeMessage(role: "user", content: fullPrompt)]
+            model: "claude-3-5-sonnet-20241022",
+            maxTokens: maxTokens,
+            temperature: temperature,
+            system: systemMessage,
+            messages: [ClaudeMessage(role: "user", content: prompt)]
         )
 
         let encoder = JSONEncoder()
@@ -90,7 +98,7 @@ I never give vague answers. If the question is broad, I break it into parts. I a
         )
 
         // Extract JSON from response
-        guard let jsonRange = response.range(of: #"\[[\s\S]*\]"#, options: .regularExpression),
+        guard let jsonRange = response.range(of: "\\[[\\s\\S]*\\]", options: .regularExpression),
               let jsonData = response[jsonRange].data(using: .utf8) else {
             throw NSError(domain: "ClaudeAPI", code: -1, userInfo: [NSLocalizedDescriptionKey: "Could not parse symptoms from response"])
         }
@@ -108,7 +116,7 @@ I never give vague answers. If the question is broad, I break it into parts. I a
         )
 
         // Extract JSON from response
-        guard let jsonRange = response.range(of: #"\{[\s\S]*\}"#, options: .regularExpression),
+        guard let jsonRange = response.range(of: "\\{[\\s\\S]*\\}", options: .regularExpression),
               let jsonData = response[jsonRange].data(using: .utf8) else {
             throw NSError(domain: "ClaudeAPI", code: -1, userInfo: [NSLocalizedDescriptionKey: "Could not parse causes from response"])
         }
@@ -118,15 +126,62 @@ I never give vague answers. If the question is broad, I break it into parts. I a
     }
 
     func findSolutions(apiKey: String, conditions: [String]) async throws -> SolutionsResponse {
-        let conditionsText = conditions.joined(separator: ", ")
+        let conditionsText = conditions.joined(separator: "\", \"")
         let response = try await callClaude(
             apiKey: apiKey,
-            prompt: "For these conditions, provide treatment approaches in Common Sense, Allopathic, Ayurvedic, Naturopathic, Homeopathic, and Unani medicine. Include reputable sources. Format as JSON: {\"solutions\": [{\"category\": \"Common Sense|Allopathic|Ayurvedic|Naturopathic|Homeopathic|Unani\", \"treatments\": [{\"name\": \"treatment\", \"description\": \"how it works\", \"source\": \"source name\", \"url\": \"URL\", \"recommendedQuestions\": [\"q1\", \"q2\"]}]}]}",
+            prompt: """
+            For EACH of the following conditions, provide treatment approaches organized by medical system.
+            
+            Conditions: ["\(conditionsText)"]
+            
+            For EACH condition, provide treatments in these 6 medical systems:
+            1. General (General advice, lifestyle changes, or treatments that don't fit other categories)
+            2. Allopathic (Modern medicine)
+            3. Ayurvedic
+            4. Naturopathic
+            5. Homeopathic
+            6. Unani
+            
+            CRITICAL: Structure the response as an array where each element represents ONE condition with its treatments across all systems.
+            
+            Format strictly as JSON:
+            {
+              "solutions": [
+                {
+                  "causeName": "First Condition Name",
+                  "systems": [
+                    {
+                      "category": "Allopathic",
+                      "treatments": [
+                        {
+                          "name": "Treatment Name",
+                          "description": "Detailed description",
+                          "source": "Reputable Source Name",
+                          "url": "https://source-url.com",
+                          "recommendedQuestions": ["Question 1", "Question 2"]
+                        }
+                      ]
+                    },
+                    {
+                      "category": "Ayurvedic",
+                      "treatments": [...]
+                    }
+                  ]
+                },
+                {
+                  "causeName": "Second Condition Name",
+                  "systems": []
+                }
+              ]
+            }
+            
+            Ensure EVERY condition has ALL 6 medical systems, even if some have fewer treatments.
+            """,
             context: "Conditions: \(conditionsText)"
         )
 
         // Extract JSON from response
-        guard let jsonRange = response.range(of: #"\{[\s\S]*\}"#, options: .regularExpression),
+        guard let jsonRange = response.range(of: "\\{[\\s\\S]*\\}", options: .regularExpression),
               let jsonData = response[jsonRange].data(using: .utf8) else {
             throw NSError(domain: "ClaudeAPI", code: -1, userInfo: [NSLocalizedDescriptionKey: "Could not parse solutions from response"])
         }
@@ -135,11 +190,30 @@ I never give vague answers. If the question is broad, I break it into parts. I a
         return try decoder.decode(SolutionsResponse.self, from: jsonData)
     }
 
-    func chatWithSource(apiKey: String, message: String, treatment: Treatment) async throws -> String {
+    func chatWithSource(apiKey: String, message: String, treatment: Treatment, symptoms: [String] = [], causes: [String] = []) async throws -> String {
+        var contextParts: [String] = []
+        
+        // Add symptoms context
+        if !symptoms.isEmpty {
+            contextParts.append("Patient Symptoms: \(symptoms.joined(separator: ", "))")
+        }
+        
+        // Add causes context
+        if !causes.isEmpty {
+            contextParts.append("Potential Causes: \(causes.joined(separator: ", "))")
+        }
+        
+        // Add treatment context
+        contextParts.append("Treatment Being Discussed: \(treatment.name)")
+        contextParts.append("Description: \(treatment.description)")
+        contextParts.append("Source: \(treatment.source)")
+        
+        let fullContext = contextParts.joined(separator: "\n")
+        
         return try await callClaude(
             apiKey: apiKey,
             prompt: message,
-            context: "Source: \(treatment.name)\nDescription: \(treatment.description)\nURL: \(treatment.url)"
+            context: fullContext
         )
     }
     
@@ -164,12 +238,14 @@ I never give vague answers. If the question is broad, I break it into parts. I a
 struct ClaudeAPIRequestBody: Codable {
     let model: String
     let maxTokens: Int
+    let temperature: Double
     let system: String
     let messages: [ClaudeMessage]
 
     enum CodingKeys: String, CodingKey {
         case model
         case maxTokens = "max_tokens"
+        case temperature
         case system
         case messages
     }

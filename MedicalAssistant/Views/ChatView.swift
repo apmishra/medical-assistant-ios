@@ -38,6 +38,39 @@ struct ChatView: View {
                 }
 
                 Divider()
+                
+                // Recommended Questions (if available and no messages sent yet)
+                if !treatment.recommendedQuestions.isEmpty && (viewModel.chatMessages[treatment.name]?.count ?? 0) <= 1 {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Recommended Questions:")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .padding(.horizontal)
+                        
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 8) {
+                                ForEach(treatment.recommendedQuestions, id: \.self) { question in
+                                    Button(action: {
+                                        messageText = question
+                                    }) {
+                                        Text(question)
+                                            .font(.caption)
+                                            .padding(.horizontal, 12)
+                                            .padding(.vertical, 8)
+                                            .background(Color.blue.opacity(0.1))
+                                            .foregroundColor(.blue)
+                                            .cornerRadius(16)
+                                    }
+                                }
+                            }
+                            .padding(.horizontal)
+                        }
+                    }
+                    .padding(.vertical, 8)
+                    .background(Color(.systemGray6))
+                    
+                    Divider()
+                }
 
                 // Input
                 HStack(spacing: 12) {

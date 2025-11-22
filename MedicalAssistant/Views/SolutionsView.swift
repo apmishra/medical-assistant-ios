@@ -1,6 +1,6 @@
 //
 //  SolutionsView.swift
-//  MedicalAssistant
+// MedicalAssistant
 //
 //  Created by Claude
 //
@@ -9,11 +9,8 @@ import SwiftUI
 
 struct SolutionsView: View {
     @EnvironmentObject var viewModel: MedicalAssistantViewModel
-    @State private var selectedCategory: String = "Common Sense"
+    @State private var selectedSubTabs: [String: String] = [:] // causeName -> selected medical system
     
-    // Define the desired order of categories
-    let categories = ["Common Sense", "Allopathic", "Ayurvedic", "Naturopathic", "Homeopathic", "Unani"]
-
     var body: some View {
         ScrollView {
             VStack(spacing: 24) {
@@ -41,60 +38,27 @@ struct SolutionsView: View {
                         .stroke(Color.yellow.opacity(0.3), lineWidth: 1)
                 )
 
-                // Solutions
-                VStack(alignment: .leading, spacing: 16) {
-                    Text("Treatment Solutions")
-                        .font(.title2)
-                        .bold()
-                    
-                    // Category Selector
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 12) {
-                            ForEach(categories, id: \.self) { category in
-                                Button(action: {
-                                    selectedCategory = category
-                                }) {
-                                    Text(category)
-                                        .fontWeight(.medium)
-                                        .padding(.vertical, 8)
-                                        .padding(.horizontal, 16)
-                                        .background(selectedCategory == category ? Color.blue : Color(.systemGray5))
-                                        .foregroundColor(selectedCategory == category ? .white : .primary)
-                                        .cornerRadius(20)
-                                }
-                            }
-                        }
-                        .padding(.horizontal, 4)
-                    }
-
-                    if let solutions = viewModel.solutions {
-                        // Filter solutions for the selected category
-                        // Note: The API might return categories with slightly different casing or names, so we try to match loosely or exact.
-                        // For now, we filter by checking if the category name contains the selected category string.
-                        let filteredSolutions = solutions.solutions.filter { $0.category.localizedCaseInsensitiveContains(selectedCategory) }
-                        
-                        if !filteredSolutions.isEmpty {
-                            VStack(spacing: 20) {
-                                ForEach(filteredSolutions) { category in
-                                    SolutionCategoryView(category: category)
-                                }
-                            }
-                        } else {
-                            VStack(spacing: 12) {
-                                Image(systemName: "doc.text.magnifyingglass")
-                                    .font(.largeTitle)
-                                    .foregroundColor(.gray)
-                                Text("No solutions found for \(selectedCategory).")
-                                    .foregroundColor(.secondary)
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding(.top, 40)
-                        }
-                    } else {
-                        Text("No solutions available yet. Please analyze causes first.")
+                // Solutions by Cause
+                if let solutions = viewModel.solutions {
+                    if solutions.solutions.isEmpty {
+                        Text("No solutions available yet. Please select causes first.")
                             .foregroundColor(.secondary)
                             .padding()
+                    } else {
+                        ForEach(solutions.solutions) { causeSolution in
+                            CauseSolutionView(
+                                causeSolution: causeSolution,
+                                selectedSubTab: Binding(
+                                    get: { selectedSubTabs[causeSolution.causeName] ?? "General" },
+                                    set: { selectedSubTabs[causeSolution.causeName] = $0 }
+                                )
+                            )
+                        }
                     }
+                } else {
+                    Text("No solutions available yet. Please analyze causes first.")
+                        .foregroundColor(.secondary)
+                        .padding()
                 }
             }
             .padding()
@@ -102,9 +66,76 @@ struct SolutionsView: View {
     }
 }
 
+struct CauseSolutionView: View {
+    @EnvironmentObject var viewModel: MedicalAssistantViewModel
+    let causeSolution: CauseSolution
+    @Binding var selectedSubTab: String
+    
+    // Medical systems in preferred order
+    let medicalSystems = ["General", "Allopathic", "Ayurvedic", "Naturopathic", "Homeopathic", "Unani"]
+    
+    // Filtered treatments based on selected sub-tab
+    var filteredSystems: [SolutionCategory] {
+        return causeSolution.systems.filter { $0.category == selectedSubTab }
+    }
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            // Cause Header
+            Text(causeSolution.causeName)
+                .font(.title2)
+                .bold()
+                .foregroundColor(.blue)
+            
+            // Medical System Sub-Tabs
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 12) {
+                    ForEach(medicalSystems, id: \.self) { system in
+                        Button(action: {
+                            selectedSubTab = system
+                        }) {
+                            Text(system)
+                                .fontWeight(.medium)
+                                .padding(.vertical, 8)
+                                .padding(.horizontal, 16)
+                                .background(selectedSubTab == system ? Color.blue : Color(.systemGray5))
+                                .foregroundColor(selectedSubTab == system ? .white : .primary)
+                                .cornerRadius(20)
+                        }
+                    }
+                }
+                .padding(.horizontal, 4)
+            }
+            
+            // Treatments
+            if filteredSystems.isEmpty {
+                VStack(spacing: 12) {
+                    Image(systemName: "doc.text.magnifyingglass")
+                        .font(.largeTitle)
+                        .foregroundColor(.gray)
+                    Text("No treatments found for \(selectedSubTab).")
+                        .foregroundColor(.secondary)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.top, 20)
+            } else {
+                VStack(spacing: 20) {
+                    ForEach(filteredSystems) { system in
+                        SolutionCategoryView(category: system, causeName: causeSolution.causeName)
+                    }
+                }
+            }
+        }
+        .padding()
+        .background(Color(.systemGray6))
+        .cornerRadius(12)
+    }
+}
+
 struct SolutionCategoryView: View {
     @EnvironmentObject var viewModel: MedicalAssistantViewModel
     let category: SolutionCategory
+    let causeName: String
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -115,12 +146,16 @@ struct SolutionCategoryView: View {
 
             VStack(spacing: 12) {
                 ForEach(Array(category.treatments.enumerated()), id: \.element.id) { index, treatment in
-                    TreatmentCard(treatment: treatment, categoryIndex: category.id.uuidString, treatmentIndex: index)
+                    TreatmentCard(
+                        treatment: treatment,
+                        categoryIndex: "\(causeName)-\(category.id.uuidString)",
+                        treatmentIndex: index
+                    )
                 }
             }
         }
         .padding()
-        .background(Color(.systemGray6))
+        .background(Color(.systemBackground))
         .cornerRadius(12)
     }
 }
@@ -206,7 +241,7 @@ struct TreatmentCard: View {
             }
         }
         .padding()
-        .background(Color(.systemBackground))
+        .background(Color(.systemGray6))
         .cornerRadius(12)
     }
 }

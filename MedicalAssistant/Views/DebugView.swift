@@ -9,6 +9,7 @@ import SwiftUI
 
 struct DebugView: View {
     @EnvironmentObject var viewModel: MedicalAssistantViewModel
+    @State private var showCopiedConfirmation = false
 
     var body: some View {
         VStack(spacing: 16) {
@@ -19,6 +20,18 @@ struct DebugView: View {
                     .bold()
 
                 Spacer()
+                
+                Button(action: {
+                    copyLogsToClipboard()
+                }) {
+                    HStack(spacing: 4) {
+                        Image(systemName: showCopiedConfirmation ? "checkmark" : "doc.on.doc")
+                        Text(showCopiedConfirmation ? "Copied!" : "Copy Logs")
+                    }
+                    .font(.caption)
+                    .foregroundColor(showCopiedConfirmation ? .green : .blue)
+                }
+                .disabled(viewModel.debugLogs.isEmpty)
 
                 Button(action: {
                     viewModel.clearDebugLogs()
@@ -58,6 +71,7 @@ struct DebugView: View {
                                 }
                             }
                             .padding(.horizontal)
+                            .textSelection(.enabled)
                         }
                     }
                 }
@@ -85,6 +99,28 @@ struct DebugView: View {
             }
 
             Spacer()
+        }
+    }
+    
+    private func copyLogsToClipboard() {
+        let logsText = viewModel.debugLogs.map { log in
+            var logEntry = "[\(log.timestamp)] \(log.message)"
+            if let input = log.inputTokens, let output = log.outputTokens {
+                logEntry += "\nTokens: \(input) in / \(output) out"
+            }
+            return logEntry
+        }.joined(separator: "\n\n")
+        
+        #if os(iOS)
+        UIPasteboard.general.string = logsText
+        #elseif os(macOS)
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(logsText, forType: .string)
+        #endif
+        
+        showCopiedConfirmation = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+            showCopiedConfirmation = false
         }
     }
 

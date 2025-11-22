@@ -92,44 +92,57 @@ class AppleIntelligenceService {
     }
     
     func findSolutions(conditions: [String]) async throws -> SolutionsResponse {
-        return SolutionsResponse(solutions: [
-            SolutionCategory(
-                category: "General Care",
-                treatments: [
-                    Treatment(
-                        name: "Professional Consultation",
-                        description: "Schedule an appointment with a healthcare provider to discuss the identified symptoms.",
-                        source: "Medical Standard",
-                        url: "https://www.google.com/search?q=doctors+near+me",
-                        recommendedQuestions: ["When did the symptoms start?", "Have they worsened over time?"]
+        let solutions = conditions.map { condition in
+            CauseSolution(
+                causeName: condition,
+                systems: [
+                    SolutionCategory(
+                        category: "Allopathic",
+                        treatments: [
+                            Treatment(
+                                name: "Professional Consultation",
+                                description: "Schedule an appointment with a healthcare provider to discuss the identified symptoms.",
+                                source: "Medical Standard",
+                                url: "https://www.google.com/search?q=doctors+near+me",
+                                recommendedQuestions: ["When did the symptoms start?", "Have they worsened over time?"]
+                            ),
+                            Treatment(
+                                name: "Symptom Monitoring",
+                                description: "Keep a log of symptom severity and frequency to share with your doctor.",
+                                source: "Self Care",
+                                url: "",
+                                recommendedQuestions: []
+                            )
+                        ]
                     ),
-                    Treatment(
-                        name: "Symptom Monitoring",
-                        description: "Keep a log of symptom severity and frequency to share with your doctor.",
-                        source: "Self Care",
-                        url: "",
-                        recommendedQuestions: []
-                    )
-                ]
-            ),
-            SolutionCategory(
-                category: "Immediate Actions",
-                treatments: [
-                    Treatment(
-                        name: "Rest and Hydration",
-                        description: "Ensure adequate rest and fluid intake while awaiting professional advice.",
-                        source: "General Wellness",
-                        url: "",
-                        recommendedQuestions: []
+                    SolutionCategory(
+                        category: "Naturopathic",
+                        treatments: [
+                            Treatment(
+                                name: "Rest and Hydration",
+                                description: "Ensure adequate rest and fluid intake while awaiting professional advice.",
+                                source: "General Advice",
+                                url: "",
+                                recommendedQuestions: []
+                            )
+                        ]
                     )
                 ]
             )
-        ])
+        }
+        
+        return SolutionsResponse(solutions: solutions)
     }
     
     // MARK: - Chat
-    func chatWithSource(message: String, treatment: Treatment) async throws -> String {
-        return "I am an on-device assistant. Regarding '\(treatment.name)': \(treatment.description). Please consult a doctor for specific advice."
+    func chatWithSource(message: String, treatment: Treatment, symptoms: [String] = [], causes: [String] = []) async throws -> String {
+        var response = "Regarding \(treatment.name):\n\n"
+        if !symptoms.isEmpty { response += "Based on your symptoms (\(symptoms.joined(separator: ", "))), " }
+        if !causes.isEmpty { response += "and potential causes (\(causes.joined(separator: ", "))), " }
+        response += "here's information about this treatment:\n\n"
+        response += "\(treatment.description)\n\n"
+        response += "This is a general response. For specific medical advice, please consult a healthcare professional."
+        return response
     }
     
     func chatAboutSymptom(message: String, symptom: Symptom) async throws -> String {

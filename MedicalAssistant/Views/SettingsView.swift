@@ -40,6 +40,100 @@ struct SettingsView: View {
                 }
                 
                 Divider()
+                
+                // LLM Tuning Parameters
+                VStack(alignment: .leading, spacing: 16) {
+                    Text("LLM Tuning Parameters")
+                        .font(.headline)
+                    
+                    // Temperature
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack {
+                            Text("Temperature")
+                                .font(.subheadline)
+                            Spacer()
+                            Text(String(format: "%.2f", viewModel.temperature))
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                        Slider(value: $viewModel.temperature, in: 0.0...2.0, step: 0.1)
+                        Text("Controls randomness. Lower = more focused, Higher = more creative")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    // Max Tokens
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack {
+                            Text("Max Tokens")
+                                .font(.subheadline)
+                            Spacer()
+                            Text("\(viewModel.maxTokens)")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                        Slider(value: Binding(
+                            get: { Double(viewModel.maxTokens) },
+                            set: { viewModel.maxTokens = Int($0) }
+                        ), in: 512...8192, step: 256)
+                        Text("Maximum tokens for response. Values below 1024 may cause incomplete JSON responses.")
+                            .font(.caption2)
+                            .foregroundColor(.orange)
+                    }
+                    
+                    // Top P
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack {
+                            Text("Top P")
+                                .font(.subheadline)
+                            Spacer()
+                            Text(String(format: "%.2f", viewModel.topP))
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                        Slider(value: $viewModel.topP, in: 0.0...1.0, step: 0.05)
+                        Text("Nucleus sampling. Lower = more deterministic")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    // Custom System Prompt
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Custom System Prompt")
+                            .font(.subheadline)
+                        TextEditor(text: $viewModel.customSystemPrompt)
+                            .frame(height: 100)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+                            )
+                        Text("Optional custom instructions prepended to all AI requests")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    Button(action: {
+                        viewModel.saveLLMTuningParameters(
+                            temperature: viewModel.temperature,
+                            maxTokens: viewModel.maxTokens,
+                            topP: viewModel.topP,
+                            customSystemPrompt: viewModel.customSystemPrompt
+                        )
+                        showingSaved = true
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                            showingSaved = false
+                        }
+                    }) {
+                        Text("Save Tuning Parameters")
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color.green)
+                            .foregroundColor(.white)
+                            .cornerRadius(8)
+                    }
+                }
+                
+                Divider()
 
                 // API Key / Configuration Section
                 VStack(alignment: .leading, spacing: 16) {

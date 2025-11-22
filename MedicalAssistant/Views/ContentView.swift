@@ -9,89 +9,103 @@ import SwiftUI
 
 struct ContentView: View {
     @EnvironmentObject var viewModel: MedicalAssistantViewModel
+    @EnvironmentObject var authService: AuthenticationService
 
     var body: some View {
-        Group {
-            ZStack {
-                // Main App Content (Always rendered, but maybe hidden/disabled if no session)
-                NavigationView {
-                    VStack(spacing: 0) {
-                        // Tab Selection
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 24) {
-                                TabButton(title: "Symptoms", icon: "arrow.up.doc", isSelected: viewModel.selectedTab == 0) {
-                                    viewModel.selectedTab = 0
-                                }
-                                TabButton(title: "Confirm", icon: "list.bullet.clipboard", isSelected: viewModel.selectedTab == 1) {
-                                    viewModel.selectedTab = 1
-                                }
-                                TabButton(title: "Causes", icon: "cross.case", isSelected: viewModel.selectedTab == 2) {
-                                    viewModel.selectedTab = 2
-                                }
-                                TabButton(title: "Solutions", icon: "pills.fill", isSelected: viewModel.selectedTab == 3) {
-                                    viewModel.selectedTab = 3
-                                }
-                                TabButton(title: "Settings", icon: "gearshape.fill", isSelected: viewModel.selectedTab == 5) {
-                                    viewModel.selectedTab = 5
-                                }
-                                TabButton(title: "Debug", icon: "ladybug.fill", isSelected: viewModel.selectedTab == 6) {
-                                    viewModel.selectedTab = 6
-                                }
+        ZStack {
+            // Main App Content (Always rendered, but maybe hidden/disabled if no session)
+            NavigationView {
+                VStack(spacing: 0) {
+                    // Tab Selection
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 24) {
+                            TabButton(title: "Symptoms", icon: "arrow.up.doc", isSelected: viewModel.selectedTab == 0) {
+                                viewModel.selectedTab = 0
                             }
-                            .padding(.horizontal)
-                            .padding(.top, 8)
-                        }
-                        
-                        Divider()
-                            .padding(.top, 8)
-                        
-                        // Content Area
-                        ZStack {
-                            switch viewModel.selectedTab {
-                            case 0: UploadView()
-                            case 1: SymptomsView()
-                            case 2: CausesView()
-                            case 3: SolutionsView()
-                            case 4: SessionsView()
-                            case 5: SettingsView()
-                            case 6: DebugView()
-                            default: UploadView()
+                            TabButton(title: "Confirm", icon: "list.bullet.clipboard", isSelected: viewModel.selectedTab == 1) {
+                                viewModel.selectedTab = 1
+                            }
+                            TabButton(title: "Causes", icon: "cross.case", isSelected: viewModel.selectedTab == 2) {
+                                viewModel.selectedTab = 2
+                            }
+                            TabButton(title: "Solutions", icon: "pills.fill", isSelected: viewModel.selectedTab == 3) {
+                                viewModel.selectedTab = 3
+                            }
+                            TabButton(title: "Settings", icon: "gearshape.fill", isSelected: viewModel.selectedTab == 5) {
+                                viewModel.selectedTab = 5
+                            }
+                            TabButton(title: "Debug", icon: "ladybug.fill", isSelected: viewModel.selectedTab == 6) {
+                                viewModel.selectedTab = 6
                             }
                         }
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .padding(.horizontal)
+                        .padding(.top, 8)
                     }
-                    .navigationBarTitleDisplayMode(.inline)
-                    .toolbar {
-                        ToolbarItem(placement: .navigationBarLeading) {
-                            Text(currentTabTitle)
-                                .font(.title2)
-                                .bold()
-                                .fixedSize()
+                    
+                    Divider()
+                        .padding(.top, 8)
+                    
+                    // Content Area
+                    ZStack {
+                        switch viewModel.selectedTab {
+                        case 0: UploadView()
+                        case 1: SymptomsView()
+                        case 2: CausesView()
+                        case 3: SolutionsView()
+                        case 4: SessionsView()
+                        case 5: SettingsView()
+                        case 6: DebugView()
+                        default: UploadView()
                         }
-                        
-                        ToolbarItem(placement: .navigationBarTrailing) {
-                            HStack(spacing: 16) {
-                                Button(action: {
-                                    viewModel.selectedTab = 4
-                                }) {
-                                    Image(systemName: "clock.arrow.circlepath")
-                                        .font(.headline)
-                                }
-                                
-                                Button(action: {
-                                    viewModel.createNewSession()
-                                }) {
-                                    Image(systemName: "plus.circle")
-                                        .font(.headline)
-                                }
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .navigationBarLeading) {
+                        Text(currentTabTitle)
+                            .font(.title2)
+                            .bold()
+                            .fixedSize()
+                    }
+                    
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        HStack(spacing: 16) {
+                            Button(action: {
+                                viewModel.clearCurrentSession()
+                                authService.signOut()
+                            }) {
+                                Image(systemName: "rectangle.portrait.and.arrow.right")
+                                    .font(.headline)
+                                    .foregroundColor(.red)
+                            }
+                            
+                            Button(action: {
+                                viewModel.selectedTab = 4
+                            }) {
+                                Image(systemName: "clock.arrow.circlepath")
+                                    .font(.headline)
+                            }
+                            
+                            Button(action: {
+                                viewModel.createNewSession()
+                            }) {
+                                Image(systemName: "plus.circle")
+                                    .font(.headline)
                             }
                         }
                     }
                 }
-                .disabled(viewModel.currentSessionId == nil) // Disable interaction when splash is shown
-                
-                // Splash Overlay
-                if viewModel.currentSessionId == nil {
+            }
+            .disabled(viewModel.currentSessionId == nil) // Disable interaction when home/splash is shown
+            
+            // Home/Splash Overlay
+            if viewModel.currentSessionId == nil {
+                if authService.isAuthenticated {
+                    HomeView()
+                        .transition(.opacity)
+                        .zIndex(1)
+                } else {
                     SplashView()
                         .transition(.opacity)
                         .zIndex(1)

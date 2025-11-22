@@ -78,8 +78,18 @@ struct SolutionCategory: Identifiable, Codable {
     }
 }
 
+struct CauseSolution: Identifiable, Codable {
+    let id = UUID()
+    let causeName: String
+    let systems: [SolutionCategory]
+
+    enum CodingKeys: String, CodingKey {
+        case causeName, systems
+    }
+}
+
 struct SolutionsResponse: Codable {
-    let solutions: [SolutionCategory]
+    let solutions: [CauseSolution]
 }
 
 // MARK: - Chat
@@ -193,11 +203,13 @@ struct MedicalSession: Identifiable, Codable {
     var solutions: SolutionsResponse?
     var chatMessages: [String: [ChatMessage]]
     var debugLogs: [DebugLog]
+    var authProvider: String
     
-    init(id: UUID = UUID(), name: String = "New Session", date: Date = Date()) {
+    init(id: UUID = UUID(), name: String = "New Session", date: Date = Date(), authProvider: String = "Unknown") {
         self.id = id
         self.name = name
         self.date = date
+        self.authProvider = authProvider
         self.pdfText = ""
         self.manualText = ""
         self.extractedSymptoms = []
@@ -208,5 +220,37 @@ struct MedicalSession: Identifiable, Codable {
         self.solutions = nil
         self.chatMessages = [:]
         self.debugLogs = []
+    }
+    func toCSV() -> String {
+        var csv = "Type,Item,Details\n"
+        
+        // Symptoms
+        for symptom in extractedSymptoms {
+            let status = confirmedSymptoms.contains(symptom) ? "Confirmed" : "Unconfirmed"
+            csv += "Symptom,\"\(symptom.symptom)\",\(status) - \(symptom.severity.rawValue)\n"
+        }
+        
+        // Additional Symptoms
+        if !additionalSymptoms.isEmpty {
+             csv += "Additional Symptom,\"\(additionalSymptoms)\",Manual Entry\n"
+        }
+        
+        // Selected Causes
+        for cause in selectedCauses {
+            csv += "Selected Cause,\"\(cause.condition)\",\(cause.probability.rawValue) probability\n"
+        }
+        
+        // Solutions
+        if let solutions = solutions {
+            for causeSolution in solutions.solutions {
+                for system in causeSolution.systems {
+                    for treatment in system.treatments {
+                        csv += "Solution,\"\(treatment.name)\",\(causeSolution.causeName) - \(system.category)\n"
+                    }
+                }
+            }
+        }
+        
+        return csv
     }
 }

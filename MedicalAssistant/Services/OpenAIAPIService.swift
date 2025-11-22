@@ -21,6 +21,12 @@ class OpenAIAPIService {
     ⚠️ DISCLAIMER: You are an AI, not a doctor. Do not provide medical advice.
     """
     
+    // LLM Tuning Parameters
+    var temperature: Double = 0.7
+    var maxTokens: Int = 2048
+    var topP: Double = 1.0
+    var customSystemPrompt: String = ""
+    
     private init() {}
     
     // MARK: - PDF Extraction (Local using PDFKit)
@@ -56,10 +62,26 @@ class OpenAIAPIService {
         request.addValue("application/json", forHTTPHeaderField: "Content-Type")
         request.addValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         
+        // Prepend custom system prompt if available
+        var finalMessages = messages
+        if !customSystemPrompt.isEmpty {
+            // Check if there's already a system message
+            if let firstMsg = finalMessages.first, firstMsg["role"] == "system" {
+                var newSystemMsg = firstMsg
+                newSystemMsg["content"] = customSystemPrompt + "\n\n" + (firstMsg["content"] ?? "")
+                finalMessages[0] = newSystemMsg
+            } else {
+                // Add new system message at the beginning
+                finalMessages.insert(["role": "system", "content": customSystemPrompt], at: 0)
+            }
+        }
+        
         var body: [String: Any] = [
             "model": "gpt-4o",
-            "messages": messages,
-            "temperature": temperature
+            "messages": finalMessages,
+            "temperature": self.temperature, // Use instance property
+            "max_tokens": self.maxTokens,
+            "top_p": self.topP
         ]
         
         if jsonMode {
@@ -212,11 +234,26 @@ class OpenAIAPIService {
     
     func findSolutions(apiKey: String, conditions: [String]) async throws -> SolutionsResponse {
         let system = """
-        Suggest treatments for the conditions.
-        Return a JSON object with a key "solutions" containing an array of objects.
-        Each object must have:
-        - "category": "Common Sense", "Allopathic", "Ayurvedic", "Naturopathic", "Homeopathic", or "Unani"
-        - "treatments": Array of objects with "name", "description", "source", "url", "recommendedQuestions"
+        For EACH condition, provide treatment approaches organized by medical system.
+        
+        For EACH condition, provide treatments in these 5 medical systems:
+        1. Allopathic (modern medicine)
+        2. Ayurvedic
+        3. Naturopathic
+        4. Homeopathic
+        5. Unani
+        
+        Format as JSON with "solutions" containing an array where each element represents ONE condition:
+        {
+          "solutions": [
+            {
+              "causeName": "Condition Name",
+              "systems": [
+                {"category": "Allopathic", "treatments": [{"name": "Name", "description": "Desc", "source": "Source", "url": "", "recommendedQuestions": ["Q1"]}]}
+              ]
+            }
+          ]
+        }
         """
         
         let userMessage = "Conditions: \(conditions.joined(separator: ", "))"
@@ -239,8 +276,15 @@ class OpenAIAPIService {
     
     // MARK: - Chat Functions
     
-    func chatWithSource(apiKey: String, message: String, treatment: Treatment) async throws -> String {
-        let system = "You are a helpful medical assistant discussing the treatment: \(treatment.name). Context: \(treatment.description)"
+    func chatWithSource(apiKey: String, message: String, treatment: Treatment, symptoms: [String] = [], causes: [String] = []) async throws -> String {
+        var contextParts: [String] = []
+        if !symptoms.isEmpty { contextParts.append("Patient Symptoms: \(symptoms.joined(separator: ", "))") }
+        if !causes.isEmpty { contextParts.append("Potential Causes: \(causes.joined(separator: ", "))") }
+        contextParts.append("Treatment: \(treatment.name)")
+        contextParts.append("Description: \(treatment.description)")
+        let context = contextParts.joined(separator: "\n")
+        
+        let system = "You are a helpful medical assistant discussing the treatment. Context:\n\(context)"
         let (response, _, _) = try await callOpenAI(apiKey: apiKey, messages: [
             ["role": "system", "content": system],
             ["role": "user", "content": message]
