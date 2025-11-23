@@ -253,24 +253,40 @@ struct MedicalSession: Identifiable, Codable {
         self.debugLogs = []
     }
     func toCSV() -> String {
-        var csv = "Type,Item,Details\n"
+        var csv = "Type,Item,Details,Selected\n"
+        
+        // Session Info
+        csv += "Session Info,\"\(name)\",\(date.formatted()),-\n"
         
         // Symptoms
         for symptom in extractedSymptoms {
             let status = confirmedSymptoms.contains(symptom) ? "Confirmed" : "Unconfirmed"
-            csv += "Symptom,\"\(symptom.symptom)\",\(status) - \(symptom.severity.rawValue)\n"
+            csv += "Symptom,\"\(symptom.symptom)\",\(status) - \(symptom.severity.rawValue),-\n"
         }
         
         // Additional Symptoms
         if !additionalSymptoms.isEmpty {
-             csv += "Additional Symptom,\"\(additionalSymptoms)\",Manual Entry\n"
+             csv += "Additional Symptom,\"\(additionalSymptoms)\",Manual Entry,-\n"
         }
         
         // Selected Causes
         for cause in selectedCauses {
-            csv += "Selected Cause,\"\(cause.condition)\",\(cause.probability.rawValue) probability\n"
+            csv += "Selected Cause,\"\(cause.condition)\",\(cause.probability.rawValue) probability,-\n"
         }
         
+        // Treatments (All retrieved)
+        for (cause, treatments) in treatmentsByCause {
+            for treatment in treatments {
+                let treatmentKey = treatment.name + treatment.description
+                let isSelected = selectedTreatmentsByCause[cause]?.contains(treatmentKey) == true ||
+                               selectedTreatments.contains(where: { $0.name == treatment.name && $0.description == treatment.description })
+                
+                let selectedStr = isSelected ? "Yes" : "No"
+                // Escape quotes in description
+                let description = treatment.description.replacingOccurrences(of: "\"", with: "\"\"")
+                csv += "Treatment,\"\(treatment.name) (\(treatment.source))\",\"\(description)\",\(selectedStr)\n"
+            }
+        }
         
         return csv
     }

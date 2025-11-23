@@ -350,7 +350,12 @@ class MedicalAssistantViewModel: ObservableObject {
     }
 
     // MARK: - Cause Analysis
-    func analyzeCauses() async -> Bool {
+    func analyzeCauses(forceRefresh: Bool = false) async -> Bool {
+        // Check if we already have causes and aren't forcing a refresh
+        if !forceRefresh && potentialCauses != nil {
+            return true
+        }
+
         guard !confirmedSymptoms.isEmpty || !additionalSymptoms.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             addDebugLog("Please confirm at least one symptom or add additional symptoms", type: .warning)
             return false

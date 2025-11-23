@@ -54,6 +54,17 @@ struct CausesView: View {
                 .padding()
             }
             .navigationTitle("Causes")
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: {
+                        Task {
+                            await viewModel.analyzeCauses(forceRefresh: true)
+                        }
+                    }) {
+                        Image(systemName: "arrow.clockwise")
+                    }
+                }
+            }
         }
     }
 }
