@@ -143,7 +143,7 @@ struct CauseTreatmentsView: View {
         // First check if we already have treatments for this cause and category
         let key = cause.condition
         if let existingTreatments = viewModel.treatmentsByCause[key],
-           let categoryTreatments = existingTreatments.filter({ $0.source == category }).first {
+           existingTreatments.contains(where: { $0.source == category }) {
             treatmentsByCategory[category] = existingTreatments.filter({ $0.source == category })
             return
         }

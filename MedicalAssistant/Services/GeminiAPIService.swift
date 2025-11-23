@@ -25,13 +25,14 @@ I never give vague answers. If the question is broad, I break it into parts. I a
     
     // LLM Tuning Parameters
     var temperature: Double = 0.7
-    var maxTokens: Int = 2048
+    var maxTokens: Int = 8192
     var topP: Double = 1.0
     var customSystemPrompt: String = ""
     
     private init() {}
     
     func callGemini(apiKey: String, prompt: String, context: String = "") async throws -> String {
+        print("Calling Gemini with maxTokens: \(maxTokens), temperature: \(temperature)")
         // Using gemini-2.0-flash-exp (Gemini 2.0 Flash Experimental)
         let urlString = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key=\(apiKey)"
             
@@ -141,21 +142,26 @@ I never give vague answers. If the question is broad, I break it into parts. I a
         return try decoder.decode([Symptom].self, from: jsonData)
     }
     
-    func analyzeCauses(apiKey: String, symptoms: [String]) async throws -> CausesResponse {
+    func analyzeCauses(apiKey: String, symptoms: [String], medicalHistory: String? = nil) async throws -> CausesResponse {
         let symptomsText = symptoms.joined(separator: ", ")
+        var contextText = "Symptoms: \(symptomsText)"
+        if let history = medicalHistory, !history.isEmpty {
+            contextText += "\n\nContext:\n\(history)"
+        }
+        
         let response = try await callGemini(
             apiKey: apiKey,
-            prompt: "Analyze these symptoms and provide potential medical causes/conditions. Format as JSON: {\"causes\": [{\"condition\": \"name\", \"probability\": \"high|medium|low\", \"explanation\": \"why\", \"urgency\": \"immediate|soon|routine\"}]}. Return ONLY JSON. Do not wrap in markdown code blocks.",
-            context: "Symptoms: \(symptomsText)"
+            prompt: "Analyze these symptoms and provide the top 3 potential medical causes/conditions. Format as JSON: {\"causes\": [{\"condition\": \"name\", \"probability\": \"high|medium|low\", \"explanation\": \"why\", \"urgency\": \"immediate|soon|routine\"}]}. Return ONLY JSON. Do not wrap in markdown code blocks. Ensure all enum values (probability, urgency) are lowercase.",
+            context: contextText
         )
-        
+
         // Multi-strategy JSON extraction
         var jsonString = response
-        
+
         // Strategy 1: Try regex extraction for JSON object
         if let jsonRange = response.range(of: "\\{[\\s\\S]*\\}", options: .regularExpression) {
             jsonString = String(response[jsonRange])
-        } 
+        }
         // Strategy 2: If no match, try removing markdown blocks (original method)
         else {
             jsonString = response
@@ -163,13 +169,33 @@ I never give vague answers. If the question is broad, I break it into parts. I a
                 .replacingOccurrences(of: "```", with: "")
                 .trimmingCharacters(in: .whitespacesAndNewlines)
         }
-        
-        guard let jsonData = jsonString.data(using: .utf8) else {
-            throw NSError(domain: "GeminiAPI", code: -1, userInfo: [NSLocalizedDescriptionKey: "Could not parse causes from response"])
+
+        print("====== GEMINI CAUSES ANALYSIS DEBUG ======")
+        print("Extracted JSON: \(jsonString)")
+
+        // If the response is an array, wrap it in the expected object format
+        jsonString = jsonString.trimmingCharacters(in: .whitespacesAndNewlines)
+        if jsonString.hasPrefix("[") {
+            jsonString = "{\"causes\": \(jsonString)}"
+            print("Wrapped array in object format")
         }
-        
+
+        guard let jsonData = jsonString.data(using: .utf8) else {
+            let errorMsg = "Could not parse causes from response. Raw response: \(response)"
+            print(errorMsg)
+            throw NSError(domain: "GeminiAPI", code: -1, userInfo: [NSLocalizedDescriptionKey: errorMsg])
+        }
+
         let decoder = JSONDecoder()
-        return try decoder.decode(CausesResponse.self, from: jsonData)
+        do {
+            let result = try decoder.decode(CausesResponse.self, from: jsonData)
+            print("Successfully decoded \(result.causes.count) causes")
+            return result
+        } catch {
+            print("Failed to decode causes JSON: \(jsonString)")
+            print("Error: \(error)")
+            throw NSError(domain: "GeminiAPI", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to parse response: \(error.localizedDescription)"])
+        }
     }
     
     

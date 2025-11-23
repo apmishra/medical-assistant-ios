@@ -12,7 +12,7 @@ class OllamaAPIService: @unchecked Sendable {
     static let shared = OllamaAPIService()
     // LLM Tuning Parameters
     var temperature: Double = 0.7
-    var maxTokens: Int = 2048
+    var maxTokens: Int = 8192
     var topP: Double = 1.0
     var customSystemPrompt: String = ""
     
@@ -42,6 +42,7 @@ class OllamaAPIService: @unchecked Sendable {
     
     // MARK: - API Call
     private func callOllama(baseURL: String, model: String, messages: [[String: String]], systemPrompt: String? = nil) async throws -> String {
+        print("Calling Ollama with maxTokens: \(maxTokens), temperature: \(temperature)")
         guard let url = URL(string: "\(baseURL)/api/chat") else {
             throw NSError(domain: "OllamaAPIService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid Base URL"])
         }
@@ -153,9 +154,9 @@ class OllamaAPIService: @unchecked Sendable {
         }
     }
     
-    func analyzeCauses(baseURL: String, model: String, symptoms: [String]) async throws -> CausesResponse {
+    func analyzeCauses(baseURL: String, model: String, symptoms: [String], medicalHistory: String? = nil) async throws -> CausesResponse {
         let systemPrompt = """
-        You are a medical AI assistant. Based on the list of symptoms provided, identify potential medical causes or conditions.
+        You are a medical diagnostic assistant. Analyze the provided symptoms and identify the top 3 potential causes.
         Return ONLY a JSON object with a "causes" key containing an array of objects. Each object should have:
         - "condition": Name of the condition
         - "probability": A string indicating likelihood (low, medium, high) - MUST be lowercase
@@ -176,7 +177,10 @@ class OllamaAPIService: @unchecked Sendable {
         Do not include any markdown formatting.
         """
         
-        let userMessage = "Symptoms: \(symptoms.joined(separator: ", "))"
+        var userMessage = "Symptoms: \(symptoms.joined(separator: ", "))"
+        if let history = medicalHistory, !history.isEmpty {
+            userMessage += "\n\nContext:\n\(history)"
+        }
         
         let response = try await callOllama(baseURL: baseURL, model: model, messages: [["role": "user", "content": userMessage]], systemPrompt: systemPrompt)
         
@@ -199,9 +203,14 @@ class OllamaAPIService: @unchecked Sendable {
         if jsonString.hasPrefix("[") {
             jsonString = "{ \"causes\": \(jsonString) }"
         }
-        
+
+        print("====== OLLAMA CAUSES ANALYSIS DEBUG ======")
+        print("Extracted JSON: \(jsonString)")
+
         guard let data = jsonString.data(using: .utf8) else {
-             throw NSError(domain: "OllamaAPIService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid response encoding"])
+            let errorMsg = "Could not parse causes from response. Raw response: \(response)"
+            print(errorMsg)
+            throw NSError(domain: "OllamaAPIService", code: -1, userInfo: [NSLocalizedDescriptionKey: errorMsg])
         }
         
         do {

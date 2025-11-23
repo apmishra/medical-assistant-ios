@@ -73,7 +73,7 @@ class AppleIntelligenceService: @unchecked Sendable {
         return symptoms
     }
     
-    func analyzeCauses(symptoms: [String]) async throws -> CausesResponse {
+    func analyzeCauses(symptoms: [String], medicalHistory: String? = nil) async throws -> CausesResponse {
         // Generic response since we can't run a full medical LLM on-device easily yet
         return CausesResponse(causes: [
             MedicalCause(

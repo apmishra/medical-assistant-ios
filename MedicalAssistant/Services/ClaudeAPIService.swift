@@ -23,7 +23,7 @@ From now on, act as my expert assistant with access to all your reasoning and kn
 
     // LLM Tuning Parameters
     var temperature: Double = 0.7
-    var maxTokens: Int = 2048
+    var maxTokens: Int = 8192
     var topP: Double = 1.0
     var customSystemPrompt: String = ""
 
@@ -44,8 +44,9 @@ From now on, act as my expert assistant with access to all your reasoning and kn
         }
 
         // Create request body without apiKey
+        print("Calling Claude with maxTokens: \(maxTokens)")
         let requestBody = ClaudeAPIRequestBody(
-            model: "claude-3-5-sonnet-20241022",
+            model: "claude-sonnet-4-5-20250929",
             maxTokens: maxTokens,
             temperature: temperature,
             system: systemMessage,
@@ -65,11 +66,16 @@ From now on, act as my expert assistant with access to all your reasoning and kn
         }
 
         if httpResponse.statusCode != 200 {
+            let errorString = String(data: data, encoding: .utf8) ?? "Unknown error data"
+            print("Claude API Error Raw Response: \(errorString)")
+            
             let errorResponse = try? JSONDecoder().decode(ClaudeErrorResponse.self, from: data)
+            let errorMessage = errorResponse?.error.message ?? "API request failed: \(errorString)"
+            
             throw NSError(
                 domain: "ClaudeAPI",
                 code: httpResponse.statusCode,
-                userInfo: [NSLocalizedDescriptionKey: errorResponse?.error.message ?? "API request failed"]
+                userInfo: [NSLocalizedDescriptionKey: errorMessage]
             )
         }
 
@@ -98,31 +104,81 @@ From now on, act as my expert assistant with access to all your reasoning and kn
         )
 
         // Extract JSON from response
-        guard let jsonRange = response.range(of: "\\[[\\s\\S]*\\]", options: .regularExpression),
-              let jsonData = response[jsonRange].data(using: .utf8) else {
+        let jsonString = extractJSONString(from: response)
+        guard let jsonData = jsonString.data(using: .utf8) else {
             throw NSError(domain: "ClaudeAPI", code: -1, userInfo: [NSLocalizedDescriptionKey: "Could not parse symptoms from response"])
         }
 
         let decoder = JSONDecoder()
-        return try decoder.decode([Symptom].self, from: jsonData)
+        do {
+            return try decoder.decode([Symptom].self, from: jsonData)
+        } catch {
+            print("Failed to decode symptoms JSON: \(jsonString)")
+            print("Error: \(error)")
+            throw error
+        }
     }
 
-    func analyzeCauses(apiKey: String, symptoms: [String]) async throws -> CausesResponse {
+    func analyzeCauses(apiKey: String, symptoms: [String], medicalHistory: String? = nil) async throws -> CausesResponse {
         let symptomsText = symptoms.joined(separator: ", ")
+        var contextText = "Symptoms: \(symptomsText)"
+        if let history = medicalHistory, !history.isEmpty {
+            contextText += "\n\nContext:\n\(history)"
+        }
+        
         let response = try await callClaude(
             apiKey: apiKey,
-            prompt: "Analyze these symptoms and provide potential medical causes/conditions. Format as JSON: {\"causes\": [{\"condition\": \"name\", \"probability\": \"high|medium|low\", \"explanation\": \"why\", \"urgency\": \"immediate|soon|routine\"}]}",
-            context: "Symptoms: \(symptomsText)"
+            prompt: "Analyze these symptoms and provide the top 3 potential medical causes/conditions. Format as JSON: {\"causes\": [{\"condition\": \"name\", \"probability\": \"high|medium|low\", \"explanation\": \"concise reason\", \"urgency\": \"immediate|soon|routine\"}]}. Return ONLY valid JSON. Keep explanations concise. Ensure all enum values (probability, urgency) are lowercase.",
+            context: contextText
         )
 
         // Extract JSON from response
-        guard let jsonRange = response.range(of: "\\{[\\s\\S]*\\}", options: .regularExpression),
-              let jsonData = response[jsonRange].data(using: .utf8) else {
-            throw NSError(domain: "ClaudeAPI", code: -1, userInfo: [NSLocalizedDescriptionKey: "Could not parse causes from response"])
+        var jsonString = extractJSONString(from: response)
+
+        print("====== CAUSES ANALYSIS DEBUG ======")
+        print("Raw Response: \(response)")
+        print("Extracted JSON: \(jsonString)")
+
+        // If the response is an array, wrap it in the expected object format
+        jsonString = jsonString.trimmingCharacters(in: .whitespacesAndNewlines)
+        if jsonString.hasPrefix("[") {
+            jsonString = "{\"causes\": \(jsonString)}"
+            print("Wrapped array in object format: \(jsonString)")
+        }
+        print("===================================")
+
+        guard let jsonData = jsonString.data(using: .utf8) else {
+            let errorMsg = "Could not parse causes from response. Raw response: \(response)"
+            print(errorMsg)
+            throw NSError(domain: "ClaudeAPI", code: -1, userInfo: [NSLocalizedDescriptionKey: errorMsg])
         }
 
         let decoder = JSONDecoder()
-        return try decoder.decode(CausesResponse.self, from: jsonData)
+        do {
+            let result = try decoder.decode(CausesResponse.self, from: jsonData)
+            print("Successfully decoded \(result.causes.count) causes")
+            return result
+        } catch let DecodingError.keyNotFound(key, context) {
+            let errorMsg = "Missing key '\(key.stringValue)' in JSON. Path: \(context.codingPath). JSON: \(jsonString)"
+            print("Decoding Error: \(errorMsg)")
+            throw NSError(domain: "ClaudeAPI", code: -1, userInfo: [NSLocalizedDescriptionKey: "Missing required field: \(key.stringValue)"])
+        } catch let DecodingError.typeMismatch(type, context) {
+            let errorMsg = "Type mismatch for type '\(type)' at path: \(context.codingPath). JSON: \(jsonString)"
+            print("Decoding Error: \(errorMsg)")
+            throw NSError(domain: "ClaudeAPI", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid data format at \(context.codingPath)"])
+        } catch let DecodingError.valueNotFound(type, context) {
+            let errorMsg = "Missing value for type '\(type)' at path: \(context.codingPath). JSON: \(jsonString)"
+            print("Decoding Error: \(errorMsg)")
+            throw NSError(domain: "ClaudeAPI", code: -1, userInfo: [NSLocalizedDescriptionKey: "Missing value at \(context.codingPath)"])
+        } catch let DecodingError.dataCorrupted(context) {
+            let errorMsg = "Data corrupted at path: \(context.codingPath). JSON: \(jsonString). Debug: \(context.debugDescription)"
+            print("Decoding Error: \(errorMsg)")
+            throw NSError(domain: "ClaudeAPI", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid JSON format: \(context.debugDescription)"])
+        } catch {
+            print("Unknown decoding error: \(error)")
+            print("Failed JSON: \(jsonString)")
+            throw NSError(domain: "ClaudeAPI", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to parse response: \(error.localizedDescription)"])
+        }
     }
 
 
@@ -167,6 +223,37 @@ From now on, act as my expert assistant with access to all your reasoning and kn
             prompt: message,
             context: "Condition: \(cause.condition)\nProbability: \(cause.probability.rawValue)\nExplanation: \(cause.explanation)\nUrgency: \(cause.urgency.rawValue)"
         )
+    }
+
+
+    private func extractJSONString(from text: String) -> String {
+        var jsonString = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        // Remove markdown code blocks if present
+        if jsonString.hasPrefix("```json") {
+            jsonString = String(jsonString.dropFirst(7))
+        } else if jsonString.hasPrefix("```") {
+            jsonString = String(jsonString.dropFirst(3))
+        }
+        
+        if jsonString.hasSuffix("```") {
+            jsonString = String(jsonString.dropLast(3))
+        }
+        
+        jsonString = jsonString.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        // Find the first '[' or '{' and the last ']' or '}'
+        if let arrayStart = jsonString.firstIndex(of: "["),
+           let arrayEnd = jsonString.lastIndex(of: "]"),
+           arrayStart <= arrayEnd {
+             return String(jsonString[arrayStart...arrayEnd])
+        } else if let objectStart = jsonString.firstIndex(of: "{"),
+                  let objectEnd = jsonString.lastIndex(of: "}"),
+                  objectStart <= objectEnd {
+            return String(jsonString[objectStart...objectEnd])
+        }
+        
+        return jsonString
     }
 }
 

@@ -23,7 +23,7 @@ class OpenAIAPIService: @unchecked Sendable {
     
     // LLM Tuning Parameters
     var temperature: Double = 0.7
-    var maxTokens: Int = 2048
+    var maxTokens: Int = 8192
     var topP: Double = 1.0
     var customSystemPrompt: String = ""
     
@@ -53,6 +53,7 @@ class OpenAIAPIService: @unchecked Sendable {
     
     // MARK: - API Call
     private func callOpenAI(apiKey: String, messages: [[String: String]], temperature: Double = 0.7, jsonMode: Bool = false) async throws -> (content: String, inputTokens: Int, outputTokens: Int) {
+        print("Calling OpenAI with maxTokens: \(maxTokens), temperature: \(temperature)")
         guard let url = URL(string: "https://api.openai.com/v1/chat/completions") else {
             throw NSError(domain: "OpenAIAPIService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid URL"])
         }
@@ -173,18 +174,21 @@ class OpenAIAPIService: @unchecked Sendable {
         return try JSONDecoder().decode(SymptomWrapper.self, from: data).symptoms
     }
     
-    func analyzeCauses(apiKey: String, symptoms: [String]) async throws -> CausesResponse {
+    func analyzeCauses(apiKey: String, symptoms: [String], medicalHistory: String? = nil) async throws -> CausesResponse {
         let system = """
-        Identify potential medical causes based on symptoms.
+        Analyze the symptoms and provide top 3 potential medical causes.
         Return a JSON object with a key "causes" containing an array of objects.
         Each object must have:
-        - "condition": Name
-        - "probability": "high", "medium", or "low" (lowercase)
-        - "explanation": Brief reasoning
-        - "urgency": "immediate", "soon", or "routine" (lowercase)
+        - "condition": Name of the condition
+        - "probability": "high", "medium", or "low"
+        - "explanation": Concise reason
+        - "urgency": "immediate", "soon", or "routine"
         """
         
-        let userMessage = "Symptoms: \(symptoms.joined(separator: ", "))"
+        var userMessage = "Symptoms: \(symptoms.joined(separator: ", "))"
+        if let history = medicalHistory, !history.isEmpty {
+            userMessage += "\n\nContext:\n\(history)"
+        }
         
         let (response, _, _) = try await callOpenAI(
             apiKey: apiKey,

@@ -31,14 +31,11 @@ struct ContentView: View {
                             TabButton(title: "Treatments", icon: "pills.fill", isSelected: viewModel.selectedTab == 3) {
                                 viewModel.selectedTab = 3
                             }
-                            TabButton(title: "Sessions", icon: "clock.arrow.circlepath", isSelected: viewModel.selectedTab == 4) {
+                            TabButton(title: "Settings", icon: "gearshape.fill", isSelected: viewModel.selectedTab == 4) {
                                 viewModel.selectedTab = 4
                             }
-                            TabButton(title: "Settings", icon: "gearshape.fill", isSelected: viewModel.selectedTab == 5) {
+                            TabButton(title: "Debug", icon: "ladybug.fill", isSelected: viewModel.selectedTab == 5) {
                                 viewModel.selectedTab = 5
-                            }
-                            TabButton(title: "Debug", icon: "ladybug.fill", isSelected: viewModel.selectedTab == 6) {
-                                viewModel.selectedTab = 6
                             }
                         }
                         .padding(.horizontal)
@@ -55,9 +52,8 @@ struct ContentView: View {
                         case 1: SymptomsView()
                         case 2: CausesView()
                         case 3: TreatmentsView()
-                        case 4: SessionsView()
-                        case 5: SettingsView()
-                        case 6: DebugView()
+                        case 4: SettingsView()
+                        case 5: DebugView()
                         default: UploadView()
                         }
                     }
@@ -76,25 +72,18 @@ struct ContentView: View {
                         HStack(spacing: 16) {
                             Button(action: {
                                 viewModel.clearCurrentSession()
-                                authService.signOut()
                             }) {
-                                Image(systemName: "rectangle.portrait.and.arrow.right")
+                                Image(systemName: "calendar.badge.clock")
                                     .font(.headline)
-                                    .foregroundColor(.red)
+                                    .foregroundColor(.blue)
                             }
-                            
-                            Button(action: {
-                                viewModel.selectedTab = 4
-                            }) {
-                                Image(systemName: "clock.arrow.circlepath")
-                                    .font(.headline)
-                            }
-                            
+
                             Button(action: {
                                 viewModel.createNewSession()
                             }) {
                                 Image(systemName: "plus.circle")
                                     .font(.headline)
+                                    .foregroundColor(.blue)
                             }
                         }
                     }
@@ -102,17 +91,11 @@ struct ContentView: View {
             }
             .disabled(viewModel.currentSessionId == nil) // Disable interaction when home/splash is shown
             
-            // Home/Splash Overlay
+            // Splash Overlay
             if viewModel.currentSessionId == nil {
-                if authService.isAuthenticated {
-                    HomeView()
-                        .transition(.opacity)
-                        .zIndex(1)
-                } else {
-                    SplashView()
-                        .transition(.opacity)
-                        .zIndex(1)
-                }
+                SplashView()
+                    .transition(.opacity)
+                    .zIndex(1)
             }
         }
         .sheet(isPresented: $viewModel.showApiKeyInput) {
@@ -143,9 +126,8 @@ struct ContentView: View {
         case 1: return "Confirm"
         case 2: return "Causes"
         case 3: return "Treatments"
-        case 4: return "Sessions"
-        case 5: return "Settings"
-        case 6: return "Debug"
+        case 4: return "Settings"
+        case 5: return "Debug"
         default: return ""
         }
     }

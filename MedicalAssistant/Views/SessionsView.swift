@@ -13,12 +13,13 @@ struct SessionsView: View {
     @State private var searchText = ""
     @State private var sessionToRename: MedicalSession?
     @State private var newName = ""
+    @State private var showingNewSessionSheet = false
 
     var filteredSessions: [MedicalSession] {
         guard let currentUserId = authService.userId else { return [] }
-        
+
         let sessions = viewModel.sessions.filter { $0.authProvider == currentUserId }
-        
+
         if searchText.isEmpty {
             return sessions
         } else {
@@ -26,9 +27,39 @@ struct SessionsView: View {
         }
     }
 
+    // Group sessions by date (ignoring time)
+    var groupedSessions: [(String, [MedicalSession])] {
+        let calendar = Calendar.current
+        let grouped = Dictionary(grouping: filteredSessions) { session -> Date in
+            calendar.startOfDay(for: session.date)
+        }
+
+        return grouped
+            .sorted { $0.key > $1.key } // Most recent dates first
+            .map { (key, value) in
+                let dateFormatter = DateFormatter()
+                dateFormatter.dateStyle = .full
+                dateFormatter.timeStyle = .none
+
+                // Check if date is today, yesterday, or other
+                let dateString: String
+                if calendar.isDateInToday(key) {
+                    dateString = "Today"
+                } else if calendar.isDateInYesterday(key) {
+                    dateString = "Yesterday"
+                } else {
+                    dateString = dateFormatter.string(from: key)
+                }
+
+                return (dateString, value.sorted { $0.date > $1.date })
+            }
+    }
+
     var body: some View {
         List {
-            ForEach(filteredSessions) { session in
+            ForEach(groupedSessions, id: \.0) { dateString, sessions in
+                Section(header: DateHeaderView(dateString: dateString, count: sessions.count)) {
+                    ForEach(sessions) { session in
                 Button(action: {
                     viewModel.loadSession(session)
                 }) {
@@ -100,6 +131,8 @@ struct SessionsView: View {
                     }
                     .tint(.blue)
                 }
+                    }
+                }
             }
         }
         .navigationTitle("Sessions")
@@ -117,5 +150,28 @@ struct SessionsView: View {
                 sessionToRename = nil
             }
         }
+    }
+}
+
+// MARK: - Date Header View
+struct DateHeaderView: View {
+    let dateString: String
+    let count: Int
+
+    var body: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(dateString)
+                    .font(.headline)
+                    .fontWeight(.bold)
+                    .foregroundColor(.primary)
+
+                Text("\(count) session\(count == 1 ? "" : "s")")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            Spacer()
+        }
+        .padding(.vertical, 4)
     }
 }

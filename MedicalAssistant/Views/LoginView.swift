@@ -2,7 +2,7 @@
 //  LoginView.swift
 //  MedicalAssistant
 //
-//  Created by Barbarik
+//  Created by Assistant
 //
 
 import SwiftUI
@@ -45,14 +45,10 @@ struct LoginView: View {
                         .scaledToFit()
                         .frame(width: 80, height: 80)
                         .foregroundColor(.blue)
-                    
-                    Text("Barbarik")
+
+                    Text("Assistant")
                         .font(.largeTitle)
                         .bold()
-                    
-                    Text("Medical Assistant")
-                        .font(.title3)
-                        .foregroundColor(.secondary)
                 }
                 .padding(.bottom, 40)
                 

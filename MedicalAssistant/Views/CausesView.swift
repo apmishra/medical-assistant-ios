@@ -19,9 +19,39 @@ struct CausesView: View {
 
                     // Potential Causes
                     VStack(alignment: .leading, spacing: 16) {
-                        Text("Potential Causes")
-                            .font(.title2)
-                            .bold()
+                        HStack {
+                            Text("Potential Causes")
+                                .font(.title2)
+                                .bold()
+                            
+                            Spacer()
+                            
+                            if viewModel.potentialCauses != nil {
+                                Button(action: {
+                                    Task {
+                                        await viewModel.analyzeCauses(forceRefresh: true)
+                                    }
+                                }) {
+                                    HStack(spacing: 4) {
+                                        Image(systemName: "arrow.clockwise")
+                                        Text("Refresh")
+                                            .font(.subheadline)
+                                    }
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 6)
+                                    .background(Color.blue)
+                                    .foregroundColor(.white)
+                                    .cornerRadius(8)
+                                }
+                            }
+                        }
+                        
+                        if viewModel.potentialCauses != nil {
+                            Text("Added more symptoms? Tap 'Refresh' to re-analyze causes.")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                                .padding(.horizontal, 4)
+                        }
 
                         if let causes = viewModel.potentialCauses {
                             VStack(spacing: 12) {

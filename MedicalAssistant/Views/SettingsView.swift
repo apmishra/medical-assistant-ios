@@ -112,6 +112,25 @@ struct SettingsView: View {
                             .foregroundColor(.secondary)
                     }
                     
+                    // Treatment Recommendation Count
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack {
+                            Text("Treatment Recommendations")
+                                .font(.subheadline)
+                            Spacer()
+                            Text("\(viewModel.treatmentRecommendationCount)")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                        Slider(value: Binding(
+                            get: { Double(viewModel.treatmentRecommendationCount) },
+                            set: { viewModel.treatmentRecommendationCount = Int($0) }
+                        ), in: 1...10, step: 1)
+                        Text("Number of treatment options to request per category (1-10)")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                    
                     Button(action: {
                         viewModel.saveLLMTuningParameters(
                             temperature: viewModel.temperature,

@@ -1,65 +1,43 @@
 # Firebase Authentication Setup Guide
 
-## Step 1: Create Firebase Project
+This guide will help you set up Google and Facebook authentication for the Medical Assistant iOS app.
 
-1. Go to https://console.firebase.google.com
-2. Click "Add project"
-3. Enter project name (e.g., "Medical Assistant")
-4. Follow the setup wizard
+## Prerequisites
 
-## Step 2: Add iOS App to Firebase
+- Xcode 14.0 or later
+- iOS 15.0 or later deployment target  
+- An Apple Developer account
+- A Google Cloud Platform account
+- A Facebook Developer account
 
-1. In Firebase Console, click "Add app" → iOS
-2. Enter Bundle ID: `com.barbarik.MedicalAssistant`
-3. Download `GoogleService-Info.plist`
-4. **IMPORTANT**: Replace the placeholder file at:
-   `/Users/aditya.mishra/src/medical-assistant-ios/MedicalAssistant/GoogleService-Info.plist`
-   with your downloaded file
-
-## Step 3: Enable Authentication Providers
-
-### Google Sign-In
-1. In Firebase Console → Authentication → Sign-in method
-2. Click "Google" → Enable
-3. Add support email
-4. Save
-
-### Facebook Login
-1. Go to https://developers.facebook.com
-2. Create a new app
-3. Get App ID and App Secret
-4. In Firebase Console → Authentication → Sign-in method
-5. Click "Facebook" → Enable
-6. Enter Facebook App ID and App Secret
-7. Copy the OAuth redirect URI from Firebase
-8. Add it to Facebook app settings
-
-## Step 4: Add Firebase SDK via Xcode
+## Step 1: Add Firebase SDK Packages
 
 1. Open `MedicalAssistant.xcodeproj` in Xcode
-2. File → Add Package Dependencies
-3. Enter: `https://github.com/firebase/firebase-ios-sdk`
-4. Select version 10.x or latest
-5. Add these packages:
-   - FirebaseAuth
-   - FirebaseCore
-   - GoogleSignIn
-   - FacebookLogin (or use Firebase Facebook provider)
+2. Go to **File** > **Add Package Dependencies**
+3. Add Firebase iOS SDK: `https://github.com/firebase/firebase-ios-sdk`
+4. Select these packages:
+   - **FirebaseAuth**
+   - **FirebaseCore**
+5. Add Google Sign-In: `https://github.com/google/GoogleSignIn-iOS`
+6. Add Facebook SDK: `https://github.com/facebook/facebook-ios-sdk`
+   - Select **FacebookLogin** package
 
-## Step 5: Update Info.plist
+## Step 2: Configure Firebase Project
 
-The code will automatically add required URL schemes and configurations.
+1. Go to [Firebase Console](https://console.firebase.google.com/)
+2. Create a new project or select existing
+3. Add iOS app with bundle ID: `com.barbarik.MedicalAssistant`
+4. Download `GoogleService-Info.plist` and replace the placeholder file
+5. Enable **Google** and **Facebook** authentication in Firebase Console
 
-## Step 6: Test
+## Step 3: Configure Info.plist
 
-1. Build and run the app
-2. Try logging in with Google
-3. Try logging in with Facebook
-4. Verify sessions are created with correct provider tags
+Add URL schemes and Facebook configuration to Info.plist.
 
-## Troubleshooting
+## Step 4: Uncomment Firebase Code
 
-- **"GoogleService-Info.plist not found"**: Make sure you replaced the placeholder file
-- **"No such module 'FirebaseAuth'"**: Add Firebase packages via SPM
-- **Google Sign-In fails**: Check REVERSED_CLIENT_ID in Info.plist matches Firebase
-- **Facebook Login fails**: Verify Facebook App ID in Info.plist and Firebase Console
+Uncomment the Firebase imports and implementation code in:
+- `AuthenticationService.swift`
+- `MedicalAssistantApp.swift`
+
+See FIREBASE_SETUP.md for detailed instructions.

@@ -18,10 +18,39 @@ struct Symptom: Identifiable, Codable, Hashable {
         case mild
         case moderate
         case severe
+
+        init(from decoder: Decoder) throws {
+            let container = try decoder.singleValueContainer()
+            let rawValue = try container.decode(String.self)
+
+            switch rawValue.lowercased() {
+            case "mild", "low", "minor":
+                self = .mild
+            case "moderate", "medium", "med":
+                self = .moderate
+            case "severe", "high", "major", "critical":
+                self = .severe
+            default:
+                // Default to moderate if unknown
+                self = .moderate
+            }
+        }
     }
 
     enum CodingKeys: String, CodingKey {
         case symptom, severity, source
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(symptom)
+        hasher.combine(severity)
+        hasher.combine(source)
+    }
+
+    static func == (lhs: Symptom, rhs: Symptom) -> Bool {
+        return lhs.symptom == rhs.symptom &&
+               lhs.severity == rhs.severity &&
+               lhs.source == rhs.source
     }
 }
 
@@ -37,16 +66,64 @@ struct MedicalCause: Identifiable, Codable, Hashable {
         case low
         case medium
         case high
+
+        init(from decoder: Decoder) throws {
+            let container = try decoder.singleValueContainer()
+            let rawValue = try container.decode(String.self)
+
+            switch rawValue.lowercased() {
+            case "low":
+                self = .low
+            case "medium", "med":
+                self = .medium
+            case "high":
+                self = .high
+            default:
+                // Default to medium if unknown
+                self = .medium
+            }
+        }
     }
 
     enum Urgency: String, Codable {
         case routine
         case soon
         case immediate
+
+        init(from decoder: Decoder) throws {
+            let container = try decoder.singleValueContainer()
+            let rawValue = try container.decode(String.self)
+
+            switch rawValue.lowercased() {
+            case "routine", "normal", "low":
+                self = .routine
+            case "soon", "moderate", "medium":
+                self = .soon
+            case "immediate", "urgent", "high", "emergency":
+                self = .immediate
+            default:
+                // Default to routine if unknown
+                self = .routine
+            }
+        }
     }
 
     enum CodingKeys: String, CodingKey {
         case condition, probability, explanation, urgency
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(condition)
+        hasher.combine(probability)
+        hasher.combine(explanation)
+        hasher.combine(urgency)
+    }
+
+    static func == (lhs: MedicalCause, rhs: MedicalCause) -> Bool {
+        return lhs.condition == rhs.condition &&
+               lhs.probability == rhs.probability &&
+               lhs.explanation == rhs.explanation &&
+               lhs.urgency == rhs.urgency
     }
 }
 
@@ -87,11 +164,17 @@ struct Treatment: Identifiable, Codable, Hashable {
     }
 
     func hash(into hasher: inout Hasher) {
-        hasher.combine(id)
+        hasher.combine(name)
+        hasher.combine(description)
+        hasher.combine(source)
+        hasher.combine(url)
     }
 
     static func == (lhs: Treatment, rhs: Treatment) -> Bool {
-        return lhs.id == rhs.id
+        return lhs.name == rhs.name &&
+               lhs.description == rhs.description &&
+               lhs.source == rhs.source &&
+               lhs.url == rhs.url
     }
 }
 

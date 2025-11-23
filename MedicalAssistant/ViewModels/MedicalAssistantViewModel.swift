@@ -30,31 +30,49 @@ class MedicalAssistantViewModel: ObservableObject {
     
     // LLM Tuning Parameters
     @Published var temperature: Double = 0.7
-    @Published var maxTokens: Int = 2048
+    @Published var maxTokens: Int = 8192
     @Published var topP: Double = 1.0
     @Published var customSystemPrompt: String = ""
-    @Published var pdfText: String = "" { didSet { updateCurrentSession() } }
-    @Published var manualText: String = "" { didSet { updateCurrentSession() } }
-    @Published var extractedSymptoms: [Symptom] = [] { didSet { updateCurrentSession() } }
-    @Published var confirmedSymptoms: Set<Symptom> = [] { didSet { updateCurrentSession() } }
-    @Published var additionalSymptoms: String = "" { didSet { updateCurrentSession() } }
-    @Published var potentialCauses: CausesResponse? { didSet { updateCurrentSession() } }
-    @Published var selectedTreatments: [Treatment] = [] { didSet { updateCurrentSession() } }
-    @Published var treatmentsByCause: [String: [Treatment]] = [:] { didSet { updateCurrentSession() } }
-    @Published var selectedTreatmentsByCause: [String: Set<String>] = [:] { didSet { updateCurrentSession() } }
-    @Published var chatMessages: [String: [ChatMessage]] = [:] { didSet { updateCurrentSession() } }
+    @Published var pdfText: String = ""
+    @Published var manualText: String = ""
+    @Published var extractedSymptoms: [Symptom] = []
+    @Published var confirmedSymptoms: Set<Symptom> = []
+    @Published var additionalSymptoms: String = ""
+    @Published var potentialCauses: CausesResponse?
+    @Published var selectedTreatments: [Treatment] = []
+    @Published var treatmentsByCause: [String: [Treatment]] = [:]
+    @Published var selectedTreatmentsByCause: [String: Set<String>] = [:]
+    @Published var chatMessages: [String: [ChatMessage]] = [:]
     @Published var activeChatTreatment: Treatment?
     @Published var activeChatSymptom: Symptom?
     @Published var activeChatCause: MedicalCause?
-    @Published var selectedCauses: Set<MedicalCause> = [] { didSet { updateCurrentSession() } }
+    @Published var selectedCauses: Set<MedicalCause> = []
     @Published var expandedSources: Set<String> = []
     @Published var selectedTab: Int = 0
-    @Published var debugLogs: [DebugLog] = [] { didSet { updateCurrentSession() } }
+    @Published var debugLogs: [DebugLog] = []
     @Published var isLoading: Bool = false
     @Published var showApiKeyInput: Bool = false
     @Published var categories: [String] = [] {
         didSet {
             saveCategories()
+        }
+    }
+    
+    @Published var existingMedicalIssues: String = "" {
+        didSet {
+            saveMedicalHistory()
+        }
+    }
+    
+    @Published var currentMedications: String = "" {
+        didSet {
+            saveMedicalHistory()
+        }
+    }
+    
+    @Published var treatmentRecommendationCount: Int = 3 {
+        didSet {
+            UserDefaults.standard.set(treatmentRecommendationCount, forKey: treatmentRecommendationCountStorageKey)
         }
     }
 
@@ -79,14 +97,17 @@ class MedicalAssistantViewModel: ObservableObject {
     private let topPStorageKey = "llm_top_p"
     private let customSystemPromptStorageKey = "llm_custom_system_prompt"
     private let categoriesStorageKey = "medical_categories"
+    private let existingMedicalIssuesStorageKey = "existing_medical_issues"
+    private let currentMedicationsStorageKey = "current_medications"
+    private let treatmentRecommendationCountStorageKey = "treatment_recommendation_count"
 
     init() {
         loadAPIKey()
         loadSessions()
         loadCategories()
+        loadMedicalHistory()
     }
 
-    // MARK: - API Key Management
     // MARK: - API Key Management
     func loadAPIKey() {
         // Load selected provider
@@ -115,9 +136,39 @@ class MedicalAssistantViewModel: ObservableObject {
             ollamaModel = storedOllamaModel
         }
         
-        loadTuningParameters(for: selectedProvider)
-        syncTuningParametersToServices()
-        checkAPIKeyStatus()
+        // Load Tuning Parameters
+        if let savedTemp = UserDefaults.standard.object(forKey: temperatureStorageKey) as? Double {
+            temperature = savedTemp
+        }
+        
+        if let savedMaxTokens = UserDefaults.standard.object(forKey: maxTokensStorageKey) as? Int {
+            maxTokens = savedMaxTokens
+        }
+        
+        if let savedTopP = UserDefaults.standard.object(forKey: topPStorageKey) as? Double {
+            topP = savedTopP
+        }
+        
+        if let savedSystemPrompt = UserDefaults.standard.string(forKey: customSystemPromptStorageKey) {
+            customSystemPrompt = savedSystemPrompt
+        }
+    }
+    
+    func loadMedicalHistory() {
+        if let issues = UserDefaults.standard.string(forKey: existingMedicalIssuesStorageKey) {
+            existingMedicalIssues = issues
+        }
+        if let meds = UserDefaults.standard.string(forKey: currentMedicationsStorageKey) {
+            currentMedications = meds
+        }
+        if let count = UserDefaults.standard.object(forKey: treatmentRecommendationCountStorageKey) as? Int {
+            treatmentRecommendationCount = count
+        }
+    }
+    
+    func saveMedicalHistory() {
+        UserDefaults.standard.set(existingMedicalIssues, forKey: existingMedicalIssuesStorageKey)
+        UserDefaults.standard.set(currentMedications, forKey: currentMedicationsStorageKey)
     }
     
     private func getStorageKey(for provider: LLMProvider, key: String) -> String {
@@ -131,7 +182,7 @@ class MedicalAssistantViewModel: ObservableObject {
         let systemPromptKey = getStorageKey(for: provider, key: "custom_system_prompt")
         
         temperature = UserDefaults.standard.object(forKey: tempKey) as? Double ?? 0.7
-        maxTokens = UserDefaults.standard.object(forKey: maxTokensKey) as? Int ?? 2048
+        maxTokens = UserDefaults.standard.object(forKey: maxTokensKey) as? Int ?? 8192
         topP = UserDefaults.standard.object(forKey: topPKey) as? Double ?? 1.0
         customSystemPrompt = UserDefaults.standard.string(forKey: systemPromptKey) ?? ""
     }
@@ -223,9 +274,9 @@ class MedicalAssistantViewModel: ObservableObject {
             let maxTokensKey = getStorageKey(for: provider, key: "max_tokens")
             let topPKey = getStorageKey(for: provider, key: "top_p")
             let systemPromptKey = getStorageKey(for: provider, key: "custom_system_prompt")
-            
+
             let t = UserDefaults.standard.object(forKey: tempKey) as? Double ?? 0.7
-            let m = UserDefaults.standard.object(forKey: maxTokensKey) as? Int ?? 2048
+            let m = UserDefaults.standard.object(forKey: maxTokensKey) as? Int ?? 8192
             let p = UserDefaults.standard.object(forKey: topPKey) as? Double ?? 1.0
             let s = UserDefaults.standard.string(forKey: systemPromptKey) ?? ""
             return (t, m, p, s)
@@ -237,27 +288,31 @@ class MedicalAssistantViewModel: ObservableObject {
         apiService.maxTokens = claudeParams.1
         apiService.topP = claudeParams.2
         apiService.customSystemPrompt = claudeParams.3
-        
+        print("Synced Claude settings: maxTokens=\(claudeParams.1), temp=\(claudeParams.0)")
+
         // Sync to Gemini
         let geminiParams = getParams(for: .gemini)
         geminiService.temperature = geminiParams.0
         geminiService.maxTokens = geminiParams.1
         geminiService.topP = geminiParams.2
         geminiService.customSystemPrompt = geminiParams.3
-        
+        print("Synced Gemini settings: maxTokens=\(geminiParams.1), temp=\(geminiParams.0)")
+
         // Sync to OpenAI
         let openaiParams = getParams(for: .openai)
         openaiService.temperature = openaiParams.0
         openaiService.maxTokens = openaiParams.1
         openaiService.topP = openaiParams.2
         openaiService.customSystemPrompt = openaiParams.3
-        
+        print("Synced OpenAI settings: maxTokens=\(openaiParams.1), temp=\(openaiParams.0)")
+
         // Sync to Ollama
         let ollamaParams = getParams(for: .ollama)
         ollamaService.temperature = ollamaParams.0
         ollamaService.maxTokens = ollamaParams.1
         ollamaService.topP = ollamaParams.2
         ollamaService.customSystemPrompt = ollamaParams.3
+        print("Synced Ollama settings: maxTokens=\(ollamaParams.1), temp=\(ollamaParams.0)")
     }
 
     // MARK: - Debug Logging
@@ -296,6 +351,7 @@ class MedicalAssistantViewModel: ObservableObject {
             pdfText = text
             addDebugLog("Text extracted from PDF using \(selectedProvider.rawValue)", type: .success)
             success = true
+            updateCurrentSession()
         } catch {
             addDebugLog("Failed to extract text: \(error.localizedDescription)", type: .error)
         }
@@ -304,9 +360,27 @@ class MedicalAssistantViewModel: ObservableObject {
         return success
     }
 
+    func getMedicalHistoryContext() -> String {
+        var context = ""
+        if !existingMedicalIssues.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            context += "\nExisting Medical Issues: \(existingMedicalIssues)"
+        }
+        if !currentMedications.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            context += "\nCurrent Medications: \(currentMedications)"
+        }
+        return context
+    }
+
     // MARK: - Symptom Analysis
     func analyzeSymptoms() async -> Bool {
-        let medicalData = !pdfText.isEmpty ? pdfText : manualText
+        var medicalData = !pdfText.isEmpty ? pdfText : manualText
+        
+        // Append medical history context
+        let historyContext = getMedicalHistoryContext()
+        if !historyContext.isEmpty {
+            medicalData += "\n\nContext:\n\(historyContext)"
+        }
+        
         guard !medicalData.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             addDebugLog("Please provide medical data first", type: .warning)
             return false
@@ -333,6 +407,7 @@ class MedicalAssistantViewModel: ObservableObject {
             extractedSymptoms = symptoms
             addDebugLog("Extracted \(symptoms.count) symptoms using \(selectedProvider.rawValue)", type: .success)
             success = true
+            updateCurrentSession()
         } catch {
             addDebugLog("Failed to analyze symptoms: \(error.localizedDescription)", type: .error)
         }
@@ -347,6 +422,7 @@ class MedicalAssistantViewModel: ObservableObject {
         } else {
             confirmedSymptoms.insert(symptom)
         }
+        updateCurrentSession()
     }
 
     // MARK: - Cause Analysis
@@ -372,23 +448,26 @@ class MedicalAssistantViewModel: ObservableObject {
             .filter { !$0.isEmpty }
         allSymptoms.append(contentsOf: additional)
 
+        let historyContext = getMedicalHistoryContext()
+
         do {
             let causes: CausesResponse
             switch selectedProvider {
             case .claude:
-                causes = try await apiService.analyzeCauses(apiKey: apiKey, symptoms: allSymptoms)
+                causes = try await apiService.analyzeCauses(apiKey: apiKey, symptoms: allSymptoms, medicalHistory: historyContext)
             case .gemini:
-                causes = try await geminiService.analyzeCauses(apiKey: geminiApiKey, symptoms: allSymptoms)
+                causes = try await geminiService.analyzeCauses(apiKey: geminiApiKey, symptoms: allSymptoms, medicalHistory: historyContext)
             case .openai:
-                causes = try await openaiService.analyzeCauses(apiKey: openaiApiKey, symptoms: allSymptoms)
+                causes = try await openaiService.analyzeCauses(apiKey: openaiApiKey, symptoms: allSymptoms, medicalHistory: historyContext)
             case .ollama:
-                causes = try await ollamaService.analyzeCauses(baseURL: ollamaBaseURL, model: ollamaModel, symptoms: allSymptoms)
+                causes = try await ollamaService.analyzeCauses(baseURL: ollamaBaseURL, model: ollamaModel, symptoms: allSymptoms, medicalHistory: historyContext)
             case .appleIntelligence:
-                causes = try await appleIntelligenceService.analyzeCauses(symptoms: allSymptoms)
+                causes = try await appleIntelligenceService.analyzeCauses(symptoms: allSymptoms, medicalHistory: historyContext)
             }
             potentialCauses = causes
             addDebugLog("Identified \(causes.causes.count) potential causes using \(selectedProvider.rawValue)", type: .success)
             success = true
+            updateCurrentSession()
         } catch {
             addDebugLog("Failed to analyze causes: \(error.localizedDescription)", type: .error)
         }
@@ -426,24 +505,32 @@ class MedicalAssistantViewModel: ObservableObject {
             // Prepare context
             let symptoms = confirmedSymptoms.map { $0.symptom }
             let causes = Array(selectedCauses).map { $0.condition }
+            let historyContext = getMedicalHistoryContext()
+            
+            // Append history to the message or context? 
+            // The chatWithSource methods take symptoms and causes. 
+            // I'll append history to the message to ensure it's seen, or I could modify chatWithSource.
+            // Appending to message is safer/easier for now as it's just a chat.
+            let fullMessage = message + (historyContext.isEmpty ? "" : "\n\n[System Note: \(historyContext)]")
             
             let response: String
             switch selectedProvider {
             case .claude:
-                response = try await apiService.chatWithSource(apiKey: apiKey, message: message, treatment: treatment, symptoms: symptoms, causes: causes)
+                response = try await apiService.chatWithSource(apiKey: apiKey, message: fullMessage, treatment: treatment, symptoms: symptoms, causes: causes)
             case .gemini:
-                response = try await geminiService.chatWithSource(apiKey: geminiApiKey, message: message, treatment: treatment, symptoms: symptoms, causes: causes)
+                response = try await geminiService.chatWithSource(apiKey: geminiApiKey, message: fullMessage, treatment: treatment, symptoms: symptoms, causes: causes)
             case .openai:
-                response = try await openaiService.chatWithSource(apiKey: openaiApiKey, message: message, treatment: treatment, symptoms: symptoms, causes: causes)
+                response = try await openaiService.chatWithSource(apiKey: openaiApiKey, message: fullMessage, treatment: treatment, symptoms: symptoms, causes: causes)
             case .ollama:
-                response = try await ollamaService.chatWithSource(baseURL: ollamaBaseURL, model: ollamaModel, message: message, treatment: treatment, symptoms: symptoms, causes: causes)
+                response = try await ollamaService.chatWithSource(baseURL: ollamaBaseURL, model: ollamaModel, message: fullMessage, treatment: treatment, symptoms: symptoms, causes: causes)
             case .appleIntelligence:
-                response = try await appleIntelligenceService.chatWithSource(message: message, treatment: treatment, symptoms: symptoms, causes: causes)
+                response = try await appleIntelligenceService.chatWithSource(message: fullMessage, treatment: treatment, symptoms: symptoms, causes: causes)
             }
             
             let assistantMessage = ChatMessage(role: .assistant, content: response, timestamp: Date())
             chatMessages[treatment.name, default: []].append(assistantMessage)
             addDebugLog("Chat response received from \(selectedProvider.rawValue)", type: .success)
+            updateCurrentSession()
         } catch {
             addDebugLog("Chat failed: \(error.localizedDescription)", type: .error)
         }
@@ -528,6 +615,7 @@ class MedicalAssistantViewModel: ObservableObject {
                 selectedTreatments.append(treatment)
             }
         }
+        updateCurrentSession()
     }
 
     func isTreatmentSelected(for cause: String, treatment: Treatment) -> Bool {
@@ -541,6 +629,7 @@ class MedicalAssistantViewModel: ObservableObject {
 
         // Update overall selected treatments
         selectedTreatments = Array(Set(selectedTreatments + treatments))
+        updateCurrentSession()
     }
 
     func removeTreatment(_ treatment: Treatment) {
@@ -556,32 +645,45 @@ class MedicalAssistantViewModel: ObservableObject {
                 selectedTreatmentsByCause[cause]?.remove(treatmentKey)
             }
         }
+        updateCurrentSession()
     }
 
     // MARK: - Treatment Retrieval by Category
     func fetchTreatments(for cause: String, category: String) async -> [Treatment] {
         let symptoms = confirmedSymptoms.map { $0.symptom }
+        let historyContext = getMedicalHistoryContext()
 
         // Prepare the query for the specific category
         let query = """
-        PROVIDE ONLY A VALID JSON ARRAY with exactly 3-5 \(category)-specific treatment options for \(cause), with NO ADDITIONAL TEXT OR EXPLANATION BEFORE OR AFTER THE JSON.
+        SYSTEM CONTEXT (CRITICAL - Consider this in all recommendations):
+        The patient has the following pre-existing conditions and medications:
+        \(historyContext.isEmpty ? "No pre-existing conditions or medications reported." : historyContext)
+        
+        CURRENT SITUATION:
+        Symptoms: \(symptoms.joined(separator: ", "))
+        Condition being addressed: \(cause)
+        
+        TASK:
+        PROVIDE ONLY A VALID JSON ARRAY with exactly \(treatmentRecommendationCount) \(category)-specific treatment options for \(cause), with NO ADDITIONAL TEXT OR EXPLANATION BEFORE OR AFTER THE JSON.
+        
+        IMPORTANT: Consider the patient's existing medications and medical issues when recommending treatments. Avoid interactions and contraindications.
 
         The JSON structure MUST be exactly:
         [
           {
             "name": "Specific treatment name for \(category) approach",
-            "description": "Detailed explanation of how this \(category) treatment addresses \(cause) in the context of \(symptoms.joined(separator: ", "))",
+            "description": "Detailed explanation of how this \(category) treatment addresses \(cause) in the context of \(symptoms.joined(separator: ", ")). Note any considerations given the patient's existing conditions/medications.",
             "source": "\(category)",
             "url": "https://example.com/\(category.lowercased())-treatment or specific \(category) resource",
             "recommendedQuestions": [
-              "How effective is this \(category) treatment for \(cause) considering \(symptoms.joined(separator: ", "))?",
+              "How effective is this \(category) treatment for \(cause) considering \(symptoms.joined(separator: ", "))?"
               "What are the potential side effects or considerations with this \(category) approach?",
               "How should I integrate this \(category) treatment with my current medications?"
             ]
           }
         ]
 
-        CRITICAL: Return ONLY the JSON array, nothing else.
+        CRITICAL: Return ONLY the JSON array with exactly \(treatmentRecommendationCount) treatments, nothing else.
         """
 
         do {
@@ -659,58 +761,76 @@ class MedicalAssistantViewModel: ObservableObject {
                 )
             }
 
-            // Extract JSON from response
+            // Extract JSON from response with enhanced cleaning
             var jsonString = response
-            
-            // More robust JSON extraction: find the first [ and the last ]
-            if let startIndex = response.firstIndex(of: "["),
-               let endIndex = response.lastIndex(of: "]") {
-                // Ensure start is before end
-                if startIndex <= endIndex {
-                    jsonString = String(response[startIndex...endIndex])
-                }
+
+            // Remove markdown code blocks first
+            jsonString = jsonString
+                .replacingOccurrences(of: "```json", with: "")
+                .replacingOccurrences(of: "```", with: "")
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+
+            // Find the first [ and the last ]
+            if let startIndex = jsonString.firstIndex(of: "["),
+               let endIndex = jsonString.lastIndex(of: "]"),
+               startIndex <= endIndex {
+                jsonString = String(jsonString[startIndex...endIndex])
             }
 
-            // Clean up the JSON string to remove any trailing characters or markdown formatting
-            jsonString = jsonString.trimmingCharacters(in: .whitespacesAndNewlines)
-            if jsonString.hasPrefix("```json") {
-                jsonString = String(jsonString.dropFirst(7))
-            } else if jsonString.hasPrefix("```") {
-                jsonString = String(jsonString.dropFirst(3))
-            }
-            if jsonString.hasSuffix("```") {
-                jsonString = String(jsonString.dropLast(3))
-            } else if jsonString.hasSuffix("```json") {
-                jsonString = String(jsonString.dropLast(7))
-            }
-            jsonString = jsonString.trimmingCharacters(in: .whitespacesAndNewlines)
+            // Clean up any control characters and normalize whitespace
+            jsonString = jsonString
+                .components(separatedBy: .controlCharacters).joined()
+                .trimmingCharacters(in: .whitespacesAndNewlines)
 
-            // Additional cleaning: Remove any remaining text that might be outside the JSON
-            if let startIndex = jsonString.range(of: "[")?.lowerBound,
-               let endIndex = jsonString.range(of: "]", options: .backwards)?.upperBound {
-                jsonString = String(jsonString[startIndex..<endIndex])
-            } else if let startIndex = jsonString.range(of: "{")?.lowerBound,
-                      let endIndex = jsonString.range(of: "}", options: .backwards)?.upperBound {
-                jsonString = String(jsonString[startIndex..<endIndex])
-            }
+            // Replace smart quotes with regular quotes (common issue with LLM responses)
+            jsonString = jsonString
+                .replacingOccurrences(of: "\u{201C}", with: "\"") // Left double quote
+                .replacingOccurrences(of: "\u{201D}", with: "\"") // Right double quote
+                .replacingOccurrences(of: "\u{2018}", with: "'")  // Left single quote
+                .replacingOccurrences(of: "\u{2019}", with: "'")  // Right single quote
+                .replacingOccurrences(of: "\u{00A0}", with: " ")  // Non-breaking space
+
+            print("====== TREATMENT JSON DEBUG ======")
+            print("Cleaned JSON: \(jsonString)")
+            print("JSON byte count: \(jsonString.utf8.count)")
 
             guard let jsonData = jsonString.data(using: .utf8) else {
                 addDebugLog("Could not parse treatment response from \(selectedProvider.rawValue)", type: .error)
                 print("Trouble parsing this response as JSON: \(response)")
+                print("===================================")
                 return []
             }
 
             let treatments: [Treatment]
             do {
                 treatments = try JSONDecoder().decode([Treatment].self, from: jsonData)
+                print("Successfully decoded \(treatments.count) treatments")
+                print("===================================")
 
                 // Only return if we got actual treatments
                 if !treatments.isEmpty {
                     return treatments
                 }
+            } catch let DecodingError.dataCorrupted(context) {
+                print("JSON parsing error - Data corrupted: \(context.debugDescription)")
+                print("Coding path: \(context.codingPath)")
+                if let underlying = context.underlyingError {
+                    print("Underlying error: \(underlying)")
+                }
+                print("Failed to parse this JSON: \(jsonString)")
+                print("===================================")
+
+                // Try to validate the JSON manually
+                do {
+                    let _ = try JSONSerialization.jsonObject(with: jsonData, options: [])
+                    print("Note: JSONSerialization can parse this, but Codable cannot. Check data types.")
+                } catch {
+                    print("JSONSerialization also failed: \(error)")
+                }
             } catch {
                 print("JSON parsing error: \(error)")
                 print("Failed to parse this JSON: \(jsonString)")
+                print("===================================")
             }
 
             // If JSON parsing failed or returned no results, try to create treatments from the text response
@@ -738,24 +858,28 @@ class MedicalAssistantViewModel: ObservableObject {
 
         addDebugLog("Chat query sent for symptom: \(symptom.symptom)", type: .info)
 
+        let historyContext = getMedicalHistoryContext()
+        let fullMessage = message + (historyContext.isEmpty ? "" : "\n\n[System Note: \(historyContext)]")
+
         do {
             let response: String
             switch selectedProvider {
             case .claude:
-                response = try await apiService.chatAboutSymptom(apiKey: apiKey, message: message, symptom: symptom)
+                response = try await apiService.chatAboutSymptom(apiKey: apiKey, message: fullMessage, symptom: symptom)
             case .gemini:
-                response = try await geminiService.chatAboutSymptom(apiKey: geminiApiKey, message: message, symptom: symptom)
+                response = try await geminiService.chatAboutSymptom(apiKey: geminiApiKey, message: fullMessage, symptom: symptom)
             case .openai:
-                response = try await openaiService.chatAboutSymptom(apiKey: openaiApiKey, message: message, symptom: symptom)
+                response = try await openaiService.chatAboutSymptom(apiKey: openaiApiKey, message: fullMessage, symptom: symptom)
             case .ollama:
-                response = try await ollamaService.chatAboutSymptom(baseURL: ollamaBaseURL, model: ollamaModel, message: message, symptom: symptom)
+                response = try await ollamaService.chatAboutSymptom(baseURL: ollamaBaseURL, model: ollamaModel, message: fullMessage, symptom: symptom)
             case .appleIntelligence:
-                response = try await appleIntelligenceService.chatAboutSymptom(message: message, symptom: symptom)
+                response = try await appleIntelligenceService.chatAboutSymptom(message: fullMessage, symptom: symptom)
             }
             
             let assistantMessage = ChatMessage(role: .assistant, content: response, timestamp: Date())
             chatMessages[symptom.symptom, default: []].append(assistantMessage)
             addDebugLog("Chat response received from \(selectedProvider.rawValue)", type: .success)
+            updateCurrentSession()
         } catch {
             addDebugLog("Chat failed: \(error.localizedDescription)", type: .error)
         }
@@ -782,24 +906,28 @@ class MedicalAssistantViewModel: ObservableObject {
 
         addDebugLog("Chat query sent for cause: \(cause.condition)", type: .info)
 
+        let historyContext = getMedicalHistoryContext()
+        let fullMessage = message + (historyContext.isEmpty ? "" : "\n\n[System Note: \(historyContext)]")
+
         do {
             let response: String
             switch selectedProvider {
             case .claude:
-                response = try await apiService.chatAboutCause(apiKey: apiKey, message: message, cause: cause)
+                response = try await apiService.chatAboutCause(apiKey: apiKey, message: fullMessage, cause: cause)
             case .gemini:
-                response = try await geminiService.chatAboutCause(apiKey: geminiApiKey, message: message, cause: cause)
+                response = try await geminiService.chatAboutCause(apiKey: geminiApiKey, message: fullMessage, cause: cause)
             case .openai:
-                response = try await openaiService.chatAboutCause(apiKey: openaiApiKey, message: message, cause: cause)
+                response = try await openaiService.chatAboutCause(apiKey: openaiApiKey, message: fullMessage, cause: cause)
             case .ollama:
-                response = try await ollamaService.chatAboutCause(baseURL: ollamaBaseURL, model: ollamaModel, message: message, cause: cause)
+                response = try await ollamaService.chatAboutCause(baseURL: ollamaBaseURL, model: ollamaModel, message: fullMessage, cause: cause)
             case .appleIntelligence:
-                response = try await appleIntelligenceService.chatAboutCause(message: message, cause: cause)
+                response = try await appleIntelligenceService.chatAboutCause(message: fullMessage, cause: cause)
             }
             
             let assistantMessage = ChatMessage(role: .assistant, content: response, timestamp: Date())
             chatMessages[cause.condition, default: []].append(assistantMessage)
             addDebugLog("Chat response received from \(selectedProvider.rawValue)", type: .success)
+            updateCurrentSession()
         } catch {
             addDebugLog("Chat failed: \(error.localizedDescription)", type: .error)
         }
@@ -820,6 +948,7 @@ class MedicalAssistantViewModel: ObservableObject {
         } else {
             selectedCauses.insert(cause)
         }
+        updateCurrentSession()
     }
 
     var medicalDataAvailable: Bool {
