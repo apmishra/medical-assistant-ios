@@ -47,11 +47,16 @@ class MedicalAssistantViewModel: ObservableObject {
     @Published var activeChatSymptom: Symptom?
     @Published var activeChatCause: MedicalCause?
     @Published var selectedCauses: Set<MedicalCause> = []
+    @Published var selectedQuestions: [DoctorQuestion] = []
     @Published var expandedSources: Set<String> = []
     @Published var selectedTab: Int = 0
     @Published var debugLogs: [DebugLog] = []
+    @Published var totalInputTokens: Int = 0
+    @Published var totalOutputTokens: Int = 0
     @Published var isLoading: Bool = false
     @Published var showApiKeyInput: Bool = false
+    
+    // LLM Provider Selection
     @Published var categories: [String] = [] {
         didSet {
             saveCategories()
@@ -60,19 +65,20 @@ class MedicalAssistantViewModel: ObservableObject {
     
     @Published var existingMedicalIssues: String = "" {
         didSet {
+            guard !isLoadingMedicalHistory else { return }
             saveMedicalHistory()
         }
     }
-    
     @Published var currentMedications: String = "" {
         didSet {
+            guard !isLoadingMedicalHistory else { return }
             saveMedicalHistory()
         }
     }
-    
-    @Published var treatmentRecommendationCount: Int = 3 {
+    @Published var treatmentRecommendationCount: Int = 5
+    @Published var questionAnswerCount: Int = 3 {
         didSet {
-            UserDefaults.standard.set(treatmentRecommendationCount, forKey: treatmentRecommendationCountStorageKey)
+            UserDefaults.standard.set(questionAnswerCount, forKey: questionAnswerCountStorageKey)
         }
     }
 
@@ -100,6 +106,7 @@ class MedicalAssistantViewModel: ObservableObject {
     private let existingMedicalIssuesStorageKey = "existing_medical_issues"
     private let currentMedicationsStorageKey = "current_medications"
     private let treatmentRecommendationCountStorageKey = "treatment_recommendation_count"
+    private let questionAnswerCountStorageKey = "question_answer_count"
 
     init() {
         loadAPIKey()
@@ -154,21 +161,55 @@ class MedicalAssistantViewModel: ObservableObject {
         }
     }
     
+    private var isLoadingMedicalHistory = false
+    
     func loadMedicalHistory() {
+        isLoadingMedicalHistory = true
+        print("=== LOADING MEDICAL HISTORY ===")
         if let issues = UserDefaults.standard.string(forKey: existingMedicalIssuesStorageKey) {
             existingMedicalIssues = issues
+            print("Loaded Issues: '\(issues)'")
+        } else {
+            print("No saved issues found")
         }
         if let meds = UserDefaults.standard.string(forKey: currentMedicationsStorageKey) {
             currentMedications = meds
+            print("Loaded Medications: '\(meds)'")
+        } else {
+            print("No saved medications found")
         }
         if let count = UserDefaults.standard.object(forKey: treatmentRecommendationCountStorageKey) as? Int {
             treatmentRecommendationCount = count
         }
+        if let count = UserDefaults.standard.object(forKey: questionAnswerCountStorageKey) as? Int {
+            questionAnswerCount = count
+        }
+        print("===============================")
+        isLoadingMedicalHistory = false
     }
     
     func saveMedicalHistory() {
+        guard !isLoadingMedicalHistory else {
+            print("Skipping save during load")
+            return
+        }
+        
+        print("=== SAVING MEDICAL HISTORY ===")
+        print("Existing Issues: '\(existingMedicalIssues)'")
+        print("Current Medications: '\(currentMedications)'")
+        print("Issues Key: \(existingMedicalIssuesStorageKey)")
+        print("Medications Key: \(currentMedicationsStorageKey)")
+        
         UserDefaults.standard.set(existingMedicalIssues, forKey: existingMedicalIssuesStorageKey)
         UserDefaults.standard.set(currentMedications, forKey: currentMedicationsStorageKey)
+        UserDefaults.standard.synchronize() // Force immediate save
+        
+        // Verify save
+        let savedIssues = UserDefaults.standard.string(forKey: existingMedicalIssuesStorageKey) ?? "nil"
+        let savedMeds = UserDefaults.standard.string(forKey: currentMedicationsStorageKey) ?? "nil"
+        print("Verified - Saved Issues: '\(savedIssues)'")
+        print("Verified - Saved Medications: '\(savedMeds)'")
+        print("==============================")
     }
     
     private func getStorageKey(for provider: LLMProvider, key: String) -> String {
@@ -311,21 +352,34 @@ class MedicalAssistantViewModel: ObservableObject {
         ollamaService.temperature = ollamaParams.0
         ollamaService.maxTokens = ollamaParams.1
         ollamaService.topP = ollamaParams.2
-        ollamaService.customSystemPrompt = ollamaParams.3
-        print("Synced Ollama settings: maxTokens=\(ollamaParams.1), temp=\(ollamaParams.0)")
-    }
+            ollamaService.customSystemPrompt = ollamaParams.3
+            print("Synced Ollama settings: maxTokens=\(ollamaParams.1), temp=\(ollamaParams.0)")
+        }
 
     // MARK: - Debug Logging
     func addDebugLog(_ message: String, type: DebugLog.LogType = .info, inputTokens: Int? = nil, outputTokens: Int? = nil) {
-        let formatter = DateFormatter()
-        formatter.timeStyle = .medium
-        let timestamp = formatter.string(from: Date())
+        let timestamp = ISO8601DateFormatter().string(from: Date())
         let log = DebugLog(timestamp: timestamp, message: message, type: type, inputTokens: inputTokens, outputTokens: outputTokens)
         debugLogs.append(log)
+        
+        // Update token totals
+        if let input = inputTokens {
+            totalInputTokens += input
+        }
+        if let output = outputTokens {
+            totalOutputTokens += output
+        }
+        
+        // Keep only last 100 logs
+        if debugLogs.count > 100 {
+            debugLogs.removeFirst(debugLogs.count - 100)
+        }
     }
 
     func clearDebugLogs() {
         debugLogs.removeAll()
+        totalInputTokens = 0
+        totalOutputTokens = 0
     }
 
     // MARK: - PDF Processing
@@ -465,7 +519,7 @@ class MedicalAssistantViewModel: ObservableObject {
                 causes = try await appleIntelligenceService.analyzeCauses(symptoms: allSymptoms, medicalHistory: historyContext)
             }
             potentialCauses = causes
-            addDebugLog("Identified \(causes.causes.count) potential causes using \(selectedProvider.rawValue)", type: .success)
+            addDebugLog("Identified \(causes.causes.count) potential causes using \(selectedProvider.rawValue)", type: .success, inputTokens: causes.inputTokens, outputTokens: causes.outputTokens)
             success = true
             updateCurrentSession()
         } catch {
@@ -950,6 +1004,149 @@ class MedicalAssistantViewModel: ObservableObject {
         }
         updateCurrentSession()
     }
+    
+    // MARK: - Doctor Questions
+    func explainDoctorQuestion(question: String, cause: MedicalCause) async throws -> String {
+        let prompt = """
+        Explain why this is an important question to ask a doctor about \(cause.condition):
+        
+        Question: "\(question)"
+        
+        Provide a clear, concise explanation (2-3 sentences) about:
+        1. What information this question helps gather
+        2. Why it's important for diagnosis or treatment
+        3. How the answer might affect care decisions
+        """
+        
+        let response: String
+        switch selectedProvider {
+        case .claude:
+            response = try await apiService.chatAboutCause(apiKey: apiKey, message: prompt, cause: cause)
+        case .gemini:
+            response = try await geminiService.chatAboutCause(apiKey: geminiApiKey, message: prompt, cause: cause)
+        case .openai:
+            response = try await openaiService.chatAboutCause(apiKey: openaiApiKey, message: prompt, cause: cause)
+        case .ollama:
+            response = try await ollamaService.chatAboutCause(baseURL: ollamaBaseURL, model: ollamaModel, message: prompt, cause: cause)
+        case .appleIntelligence:
+            response = try await appleIntelligenceService.chatAboutCause(message: prompt, cause: cause)
+        }
+        
+        return response
+    }
+    
+    func addQuestion(_ question: String, for cause: String) {
+        let newQuestion = DoctorQuestion(question: question, cause: cause)
+        if !selectedQuestions.contains(where: { $0.question == question && $0.cause == cause }) {
+            selectedQuestions.append(newQuestion)
+            updateCurrentSession()
+        }
+    }
+    
+    func removeQuestion(_ question: DoctorQuestion) {
+        selectedQuestions.removeAll { $0.question == question.question && $0.cause == question.cause }
+        updateCurrentSession()
+    }
+    
+    func toggleQuestionAsked(_ question: DoctorQuestion) {
+        if let index = selectedQuestions.firstIndex(where: { $0.question == question.question && $0.cause == question.cause }) {
+            selectedQuestions[index].isAsked.toggle()
+            updateCurrentSession()
+        }
+    }
+    
+    func fetchAnswersForQuestion(_ question: DoctorQuestion, refresh: Bool = false) async throws -> [String] {
+        // If we have cached answers and not refreshing, return them
+        if !refresh, let answers = question.answers, !answers.isEmpty {
+            return answers
+        }
+        
+        // Build the prompt with explicit instructions
+        let prompt = """
+        A patient has the following question about \(question.cause):
+        
+        "\(question.question)"
+        
+        Please provide EXACTLY \(questionAnswerCount) clear, concise answers or points that address this question.
+        
+        IMPORTANT:
+        - You MUST provide exactly \(questionAnswerCount) answers, no more and no less
+        - Format your response as a numbered list (1., 2., 3., etc.)
+        - Each answer should be practical and helpful for a patient to understand
+        - Each answer should be 1-2 sentences
+        - Do not include any introduction or conclusion text
+        - Start directly with "1." for the first answer
+        
+        Example format:
+        1. First answer here.
+        2. Second answer here.
+        3. Third answer here.
+        """
+        
+        // Fetch from LLM
+        let response: String
+        
+        // Create a dummy cause for the chat context
+        let dummyCause = MedicalCause(
+            condition: question.cause,
+            probability: .medium,
+            explanation: "Context for question",
+            urgency: .routine,
+            recommendedQuestions: []
+        )
+        
+        switch selectedProvider {
+        case .claude:
+            response = try await apiService.chatAboutCause(apiKey: apiKey, message: prompt, cause: dummyCause)
+        case .gemini:
+            response = try await geminiService.chatAboutCause(apiKey: geminiApiKey, message: prompt, cause: dummyCause)
+        case .openai:
+            response = try await openaiService.chatAboutCause(apiKey: openaiApiKey, message: prompt, cause: dummyCause)
+        case .ollama:
+            response = try await ollamaService.chatAboutCause(baseURL: ollamaBaseURL, model: ollamaModel, message: prompt, cause: dummyCause)
+        case .appleIntelligence:
+            response = try await appleIntelligenceService.chatAboutCause(message: prompt, cause: dummyCause)
+        }
+        
+        // Parse the numbered list
+        let answers = parseNumberedList(from: response)
+        
+        // Update the question with answers
+        if let index = selectedQuestions.firstIndex(where: { $0.question == question.question && $0.cause == question.cause }) {
+            selectedQuestions[index].answers = answers
+            selectedQuestions[index].lastFetched = Date()
+            updateCurrentSession()
+        }
+        
+        return answers
+    }
+    
+    private func parseNumberedList(from text: String) -> [String] {
+        var answers: [String] = []
+        let lines = text.components(separatedBy: .newlines)
+        
+        for line in lines {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            // Match lines starting with numbers like "1.", "1)", "1-", etc.
+            if let range = trimmed.range(of: "^\\d+[.)\\-:]\\s*", options: .regularExpression) {
+                let answer = String(trimmed[range.upperBound...]).trimmingCharacters(in: .whitespaces)
+                if !answer.isEmpty {
+                    answers.append(answer)
+                }
+            }
+        }
+        
+        // If we didn't find numbered items, split by newlines and take non-empty lines
+        // Don't limit here - let the LLM control the count
+        if answers.isEmpty {
+            answers = lines
+                .map { $0.trimmingCharacters(in: .whitespaces) }
+                .filter { !$0.isEmpty && $0.count > 10 } // Filter out very short lines
+                .map { String($0) }
+        }
+        
+        return answers
+    }
 
     var medicalDataAvailable: Bool {
         !pdfText.isEmpty || !manualText.isEmpty
@@ -960,10 +1157,24 @@ class MedicalAssistantViewModel: ObservableObject {
     
     func loadSessions() {
         if let data = UserDefaults.standard.data(forKey: sessionsStorageKey) {
-            if let decoded = try? JSONDecoder().decode([MedicalSession].self, from: data) {
+            do {
+                let decoded = try JSONDecoder().decode([MedicalSession].self, from: data)
                 sessions = decoded.sorted(by: { $0.date > $1.date })
                 addDebugLog("Loaded \(sessions.count) sessions", type: .success)
+            } catch {
+                // If decoding fails, try to preserve the data and log the error
+                addDebugLog("Failed to decode sessions: \(error.localizedDescription)", type: .error)
+                print("Session decode error: \(error)")
+                
+                // Don't clear the data - keep it in UserDefaults for potential recovery
+                // Just start with empty sessions array for now
+                sessions = []
+                
+                // Optionally, you could try to migrate old session format here
+                // For now, we'll just log the error and start fresh
             }
+        } else {
+            addDebugLog("No saved sessions found", type: .info)
         }
     }
     
@@ -1005,10 +1216,11 @@ class MedicalAssistantViewModel: ObservableObject {
         potentialCauses = session.potentialCauses
         selectedCauses = session.selectedCauses
         selectedTreatments = session.selectedTreatments
-        treatmentsByCause = session.treatmentsByCause
-        selectedTreatmentsByCause = session.selectedTreatmentsByCause
-        chatMessages = session.chatMessages
-        debugLogs = session.debugLogs
+        self.treatmentsByCause = session.treatmentsByCause
+        self.selectedTreatmentsByCause = session.selectedTreatmentsByCause
+        self.chatMessages = session.chatMessages
+        self.selectedQuestions = session.selectedQuestions
+        self.debugLogs = session.debugLogs
         
         // Reset UI state
         selectedTab = 0
@@ -1034,6 +1246,7 @@ class MedicalAssistantViewModel: ObservableObject {
         session.treatmentsByCause = treatmentsByCause
         session.selectedTreatmentsByCause = selectedTreatmentsByCause
         session.chatMessages = chatMessages
+        session.selectedQuestions = selectedQuestions
         session.debugLogs = debugLogs
 
         sessions[index] = session

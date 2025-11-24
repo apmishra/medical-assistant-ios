@@ -151,7 +151,27 @@ I never give vague answers. If the question is broad, I break it into parts. I a
         
         let response = try await callGemini(
             apiKey: apiKey,
-            prompt: "Analyze these symptoms and provide the top 3 potential medical causes/conditions. Format as JSON: {\"causes\": [{\"condition\": \"name\", \"probability\": \"high|medium|low\", \"explanation\": \"why\", \"urgency\": \"immediate|soon|routine\"}]}. Return ONLY JSON. Do not wrap in markdown code blocks. Ensure all enum values (probability, urgency) are lowercase.",
+            prompt: """
+            Analyze these symptoms and provide the top 3 potential medical causes/conditions.
+            For each cause, include 5 specific questions the patient should ask their doctor.
+            
+            Format as JSON: {
+              "causes": [{
+                "condition": "name",
+                "probability": "high|medium|low",
+                "explanation": "why",
+                "urgency": "immediate|soon|routine",
+                "recommendedQuestions": [
+                  "Question 1 about diagnosis?",
+                  "Question 2 about tests?",
+                  "Question 3 about treatment?",
+                  "Question 4 about prognosis?",
+                  "Question 5 about lifestyle?"
+                ]
+              }]}
+            
+            Return ONLY JSON. Do not wrap in markdown code blocks. Ensure all enum values (probability, urgency) are lowercase.
+            """,
             context: contextText
         )
 

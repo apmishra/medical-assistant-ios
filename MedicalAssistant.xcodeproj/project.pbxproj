@@ -23,6 +23,9 @@
 		311436552ED195E900133BEC /* CauseTreatmentsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 311436522ED195E900133BEC /* CauseTreatmentsView.swift */; };
 		3162C39B2ED2D67E004D3A52 /* LaunchScreenView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3162C39A2ED2D67E004D3A52 /* LaunchScreenView.swift */; };
 		3162C39D2ED2E6F4004D3A52 /* LaunchScreenView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3162C39C2ED2E6F4004D3A52 /* LaunchScreenView.swift */; };
+		3162C39F2ED3A222004D3A52 /* DoctorQuestionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3162C39E2ED3A222004D3A52 /* DoctorQuestionsView.swift */; };
+		3162C3A12ED3E713004D3A52 /* QuestionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3162C3A02ED3E713004D3A52 /* QuestionsView.swift */; };
+		3162C3A32ED3EDFD004D3A52 /* QuestionChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3162C3A22ED3EDFD004D3A52 /* QuestionChatView.swift */; };
 		FA0000010000000000000001 /* MedicalAssistantApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000020000000000000001 /* MedicalAssistantApp.swift */; };
 		FA0000030000000000000001 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000040000000000000001 /* ContentView.swift */; };
 		FA0000050000000000000001 /* MedicalModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000060000000000000001 /* MedicalModels.swift */; };
@@ -58,6 +61,9 @@
 		311436532ED195E900133BEC /* TreatmentsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TreatmentsView.swift; sourceTree = "<group>"; };
 		3162C39A2ED2D67E004D3A52 /* LaunchScreenView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchScreenView.swift; sourceTree = "<group>"; };
 		3162C39C2ED2E6F4004D3A52 /* LaunchScreenView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchScreenView.swift; sourceTree = "<group>"; };
+		3162C39E2ED3A222004D3A52 /* DoctorQuestionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DoctorQuestionsView.swift; sourceTree = "<group>"; };
+		3162C3A02ED3E713004D3A52 /* QuestionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuestionsView.swift; sourceTree = "<group>"; };
+		3162C3A22ED3EDFD004D3A52 /* QuestionChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuestionChatView.swift; sourceTree = "<group>"; };
 		FA0000020000000000000001 /* MedicalAssistantApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MedicalAssistantApp.swift; sourceTree = "<group>"; };
 		FA0000040000000000000001 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		FA0000060000000000000001 /* MedicalModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MedicalModels.swift; sourceTree = "<group>"; };
@@ -117,6 +123,9 @@
 		FA0000320000000000000001 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				3162C3A22ED3EDFD004D3A52 /* QuestionChatView.swift */,
+				3162C3A02ED3E713004D3A52 /* QuestionsView.swift */,
+				3162C39E2ED3A222004D3A52 /* DoctorQuestionsView.swift */,
 				3162C39C2ED2E6F4004D3A52 /* LaunchScreenView.swift */,
 				3162C39A2ED2D67E004D3A52 /* LaunchScreenView.swift */,
 				311436522ED195E900133BEC /* CauseTreatmentsView.swift */,
@@ -243,9 +252,11 @@
 				311436552ED195E900133BEC /* CauseTreatmentsView.swift in Sources */,
 				FA0000010000000000000001 /* MedicalAssistantApp.swift in Sources */,
 				FA0000030000000000000001 /* ContentView.swift in Sources */,
+				3162C3A32ED3EDFD004D3A52 /* QuestionChatView.swift in Sources */,
 				FA0000050000000000000001 /* MedicalModels.swift in Sources */,
 				3114364F2ED15F1500133BEC /* HomeView.swift in Sources */,
 				3114363D2ED0204800133BEC /* SymptomChatView.swift in Sources */,
+				3162C39F2ED3A222004D3A52 /* DoctorQuestionsView.swift in Sources */,
 				FA0000070000000000000001 /* ClaudeAPIService.swift in Sources */,
 				FA0000090000000000000001 /* MedicalAssistantViewModel.swift in Sources */,
 				3114364D2ED156A200133BEC /* LoginView.swift in Sources */,
@@ -256,6 +267,7 @@
 				311436452ED02F3200133BEC /* OllamaAPIService.swift in Sources */,
 				311436512ED1858400133BEC /* CategoryManagementView.swift in Sources */,
 				311436492ED0E9DA00133BEC /* AppleIntelligenceService.swift in Sources */,
+				3162C3A12ED3E713004D3A52 /* QuestionsView.swift in Sources */,
 				3114363F2ED021D000133BEC /* CauseChatView.swift in Sources */,
 				311436392ED0164200133BEC /* OpenAIAPIService.swift in Sources */,
 				FA0000150000000000000001 /* CausesView.swift in Sources */,

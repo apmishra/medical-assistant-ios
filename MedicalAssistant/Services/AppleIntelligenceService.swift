@@ -80,13 +80,27 @@ class AppleIntelligenceService: @unchecked Sendable {
                 condition: "Medical Observation",
                 probability: .high,
                 explanation: "Based on the extracted text, the patient is experiencing symptoms that require professional evaluation. This on-device analysis has highlighted key areas of concern from the document.",
-                urgency: .routine
+                urgency: .routine,
+                recommendedQuestions: [
+                    "What specific tests do you recommend based on these symptoms?",
+                    "Should I see a specialist for further evaluation?",
+                    "Are there any immediate concerns I should be aware of?",
+                    "What symptoms should prompt me to seek emergency care?",
+                    "What lifestyle modifications might help manage these symptoms?"
+                ]
             ),
             MedicalCause(
                 condition: "Consultation Recommended",
                 probability: .medium,
                 explanation: "The symptoms described (e.g., \(symptoms.prefix(2).joined(separator: ", "))) suggest a need for a physical examination to rule out underlying causes.",
-                urgency: .routine
+                urgency: .routine,
+                recommendedQuestions: [
+                    "What physical examination findings would you look for?",
+                    "Are there any diagnostic tests you'd recommend?",
+                    "How soon should I schedule a follow-up appointment?",
+                    "What warning signs should I watch for?",
+                    "Are there any over-the-counter treatments I can try while waiting?"
+                ]
             )
         ])
     }

@@ -61,6 +61,7 @@ struct MedicalCause: Identifiable, Codable, Hashable {
     let probability: Probability
     let explanation: String
     let urgency: Urgency
+    let recommendedQuestions: [String]
 
     enum Probability: String, Codable {
         case low
@@ -109,7 +110,7 @@ struct MedicalCause: Identifiable, Codable, Hashable {
     }
 
     enum CodingKeys: String, CodingKey {
-        case condition, probability, explanation, urgency
+        case condition, probability, explanation, urgency, recommendedQuestions
     }
 
     func hash(into hasher: inout Hasher) {
@@ -117,18 +118,29 @@ struct MedicalCause: Identifiable, Codable, Hashable {
         hasher.combine(probability)
         hasher.combine(explanation)
         hasher.combine(urgency)
+        hasher.combine(recommendedQuestions)
     }
 
     static func == (lhs: MedicalCause, rhs: MedicalCause) -> Bool {
         return lhs.condition == rhs.condition &&
                lhs.probability == rhs.probability &&
                lhs.explanation == rhs.explanation &&
-               lhs.urgency == rhs.urgency
+               lhs.urgency == rhs.urgency &&
+               lhs.recommendedQuestions == rhs.recommendedQuestions
     }
 }
 
+// MARK: - Response Models
 struct CausesResponse: Codable {
     let causes: [MedicalCause]
+    var inputTokens: Int?
+    var outputTokens: Int?
+    
+    init(causes: [MedicalCause], inputTokens: Int? = nil, outputTokens: Int? = nil) {
+        self.causes = causes
+        self.inputTokens = inputTokens
+        self.outputTokens = outputTokens
+    }
 }
 
 // MARK: - Solution
@@ -296,6 +308,61 @@ struct ClaudeErrorResponse: Codable {
     }
 }
 
+// MARK: - Doctor Question
+struct DoctorQuestion: Identifiable, Codable, Hashable {
+    let id: UUID
+    let question: String
+    let cause: String // Which condition this question relates to
+    var isAsked: Bool
+    var answers: [String]? // Cached LLM answers
+    var lastFetched: Date? // When answers were last fetched
+    
+    init(question: String, cause: String, isAsked: Bool = false, answers: [String]? = nil, lastFetched: Date? = nil) {
+        self.id = UUID()
+        self.question = question
+        self.cause = cause
+        self.isAsked = isAsked
+        self.answers = answers
+        self.lastFetched = lastFetched
+    }
+    
+    enum CodingKeys: String, CodingKey {
+        case question, cause, isAsked, answers, lastFetched
+    }
+    
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = UUID()
+        self.question = try container.decode(String.self, forKey: .question)
+        self.cause = try container.decode(String.self, forKey: .cause)
+        // Default to false if isAsked is missing (for backward compatibility)
+        self.isAsked = (try? container.decode(Bool.self, forKey: .isAsked)) ?? false
+        self.answers = try? container.decode([String].self, forKey: .answers)
+        self.lastFetched = try? container.decode(Date.self, forKey: .lastFetched)
+    }
+    
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(question, forKey: .question)
+        try container.encode(cause, forKey: .cause)
+        try container.encode(isAsked, forKey: .isAsked)
+        try container.encodeIfPresent(answers, forKey: .answers)
+        try container.encodeIfPresent(lastFetched, forKey: .lastFetched)
+    }
+    
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(question)
+        hasher.combine(cause)
+        hasher.combine(isAsked)
+    }
+    
+    static func == (lhs: DoctorQuestion, rhs: DoctorQuestion) -> Bool {
+        return lhs.question == rhs.question &&
+               lhs.cause == rhs.cause &&
+               lhs.isAsked == rhs.isAsked
+    }
+}
+
 // MARK: - Session Management
 struct MedicalSession: Identifiable, Codable {
     let id: UUID
@@ -314,8 +381,39 @@ struct MedicalSession: Identifiable, Codable {
     var treatmentsByCause: [String: [Treatment]]
     var selectedTreatmentsByCause: [String: Set<String>]
     var chatMessages: [String: [ChatMessage]]
+    var selectedQuestions: [DoctorQuestion]
     var debugLogs: [DebugLog]
     var authProvider: String
+    
+    // Custom decoder for backward compatibility
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        name = try container.decode(String.self, forKey: .name)
+        date = try container.decode(Date.self, forKey: .date)
+        pdfText = try container.decode(String.self, forKey: .pdfText)
+        manualText = try container.decode(String.self, forKey: .manualText)
+        extractedSymptoms = try container.decode([Symptom].self, forKey: .extractedSymptoms)
+        confirmedSymptoms = try container.decode(Set<Symptom>.self, forKey: .confirmedSymptoms)
+        additionalSymptoms = try container.decode(String.self, forKey: .additionalSymptoms)
+        potentialCauses = try? container.decode(CausesResponse.self, forKey: .potentialCauses)
+        selectedCauses = try container.decode(Set<MedicalCause>.self, forKey: .selectedCauses)
+        selectedTreatments = try container.decode([Treatment].self, forKey: .selectedTreatments)
+        treatmentsByCause = try container.decode([String: [Treatment]].self, forKey: .treatmentsByCause)
+        selectedTreatmentsByCause = try container.decode([String: Set<String>].self, forKey: .selectedTreatmentsByCause)
+        chatMessages = try container.decode([String: [ChatMessage]].self, forKey: .chatMessages)
+        // Default to empty array if selectedQuestions is missing (backward compatibility)
+        selectedQuestions = (try? container.decode([DoctorQuestion].self, forKey: .selectedQuestions)) ?? []
+        debugLogs = try container.decode([DebugLog].self, forKey: .debugLogs)
+        authProvider = try container.decode(String.self, forKey: .authProvider)
+    }
+    
+    enum CodingKeys: String, CodingKey {
+        case id, name, date, pdfText, manualText, extractedSymptoms, confirmedSymptoms
+        case additionalSymptoms, potentialCauses, selectedCauses, selectedTreatments
+        case treatmentsByCause, selectedTreatmentsByCause, chatMessages, selectedQuestions
+        case debugLogs, authProvider
+    }
     
     init(id: UUID = UUID(), name: String = "New Session", date: Date = Date(), authProvider: String = "Unknown") {
         self.id = id
@@ -333,6 +431,7 @@ struct MedicalSession: Identifiable, Codable {
         self.treatmentsByCause = [:]
         self.selectedTreatmentsByCause = [:]
         self.chatMessages = [:]
+        self.selectedQuestions = []
         self.debugLogs = []
     }
     func toCSV() -> String {

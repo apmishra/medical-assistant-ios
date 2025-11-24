@@ -157,11 +157,14 @@ class OllamaAPIService: @unchecked Sendable {
     func analyzeCauses(baseURL: String, model: String, symptoms: [String], medicalHistory: String? = nil) async throws -> CausesResponse {
         let systemPrompt = """
         You are a medical diagnostic assistant. Analyze the provided symptoms and identify the top 3 potential causes.
+        For each cause, include 5 specific questions the patient should ask their doctor.
+        
         Return ONLY a JSON object with a "causes" key containing an array of objects. Each object should have:
         - "condition": Name of the condition
         - "probability": A string indicating likelihood (low, medium, high) - MUST be lowercase
         - "explanation": A brief explanation of why this condition is suspected
         - "urgency": A string indicating urgency (routine, soon, immediate) - MUST be lowercase
+        - "recommendedQuestions": Array of 5 specific questions for the doctor
         
         Example format:
         {
@@ -170,7 +173,14 @@ class OllamaAPIService: @unchecked Sendable {
               "condition": "Migraine",
               "probability": "high",
               "explanation": "Matches symptoms of headache and nausea.",
-              "urgency": "soon"
+              "urgency": "soon",
+              "recommendedQuestions": [
+                "What tests can confirm this is a migraine?",
+                "Are there preventive medications I should consider?",
+                "What triggers should I avoid?",
+                "When should I seek emergency care?",
+                "Are there lifestyle changes that could help?"
+              ]
             }
           ]
         }
@@ -224,6 +234,7 @@ class OllamaAPIService: @unchecked Sendable {
                 let probability: String
                 let explanation: String
                 let urgency: String? // Optional in case model misses it
+                let recommendedQuestions: [String]? // Optional in case model misses it
             }
             
             let rawResponse = try JSONDecoder().decode(RawCausesResponse.self, from: data)
@@ -241,7 +252,13 @@ class OllamaAPIService: @unchecked Sendable {
                 else if urgString.contains("soon") { urg = .soon }
                 else { urg = .routine }
                 
-                return MedicalCause(condition: raw.condition, probability: prob, explanation: raw.explanation, urgency: urg)
+                return MedicalCause(
+                    condition: raw.condition,
+                    probability: prob,
+                    explanation: raw.explanation,
+                    urgency: urg,
+                    recommendedQuestions: raw.recommendedQuestions ?? []
+                )
             }
             
             return CausesResponse(causes: validCauses)

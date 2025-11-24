@@ -29,7 +29,7 @@ From now on, act as my expert assistant with access to all your reasoning and kn
 
     private init() {}
 
-    private func callClaude(apiKey: String, prompt: String, context: String = "") async throws -> String {
+    private func callClaude(apiKey: String, prompt: String, context: String = "") async throws -> (String, Int?, Int?) {
         let url = URL(string: "https://api.anthropic.com/v1/messages")!
 
         var request = URLRequest(url: url)
@@ -46,7 +46,7 @@ From now on, act as my expert assistant with access to all your reasoning and kn
         // Create request body without apiKey
         print("Calling Claude with maxTokens: \(maxTokens)")
         let requestBody = ClaudeAPIRequestBody(
-            model: "claude-sonnet-4-5-20250929",
+            model: "claude-sonnet-4-20250514",
             maxTokens: maxTokens,
             temperature: temperature,
             system: systemMessage,
@@ -54,10 +54,7 @@ From now on, act as my expert assistant with access to all your reasoning and kn
         )
 
         let encoder = JSONEncoder()
-        encoder.keyEncodingStrategy = .convertToSnakeCase
-        let bodyData = try encoder.encode(requestBody)
-
-        request.httpBody = bodyData
+        request.httpBody = try encoder.encode(requestBody)
 
         let (data, response) = try await URLSession.shared.data(for: request)
 
@@ -66,7 +63,9 @@ From now on, act as my expert assistant with access to all your reasoning and kn
         }
 
         if httpResponse.statusCode != 200 {
-            let errorString = String(data: data, encoding: .utf8) ?? "Unknown error data"
+            let errorString = String(data: data, encoding: .utf8) ?? "Unknown error"
+            print("=== CLAUDE API ERROR ===")
+            print("Status Code: \(httpResponse.statusCode)")
             print("Claude API Error Raw Response: \(errorString)")
             
             let errorResponse = try? JSONDecoder().decode(ClaudeErrorResponse.self, from: data)
@@ -82,22 +81,27 @@ From now on, act as my expert assistant with access to all your reasoning and kn
         let decoder = JSONDecoder()
         let claudeResponse = try decoder.decode(ClaudeResponse.self, from: data)
 
-        return claudeResponse.content.first?.text ?? ""
+        let text = claudeResponse.content.first?.text ?? ""
+        let inputTokens = claudeResponse.usage?.inputTokens
+        let outputTokens = claudeResponse.usage?.outputTokens
+        
+        return (text, inputTokens, outputTokens)
     }
 
     func extractTextFromPDF(apiKey: String, pdfData: Data) async throws -> String {
         let base64PDF = pdfData.base64EncodedString()
         let truncatedPDF = String(base64PDF.prefix(1000))
 
-        return try await callClaude(
+        let (text, _, _) = try await callClaude(
             apiKey: apiKey,
-            prompt: "Extract all medical information, test results, diagnoses, and relevant data from this document. Present it in a clear, structured format.",
-            context: "PDF Content (base64): \(truncatedPDF)..."
+            prompt: "Extract all text from this PDF document. Return only the extracted text, no additional commentary.",
+            context: "PDF Data (base64, first 1000 chars): \(truncatedPDF)"
         )
+        return text
     }
 
     func analyzeSymptoms(apiKey: String, medicalData: String) async throws -> [Symptom] {
-        let response = try await callClaude(
+        let (response, _, _) = try await callClaude(
             apiKey: apiKey,
             prompt: "Analyze this medical data and extract all symptoms, abnormal findings, and concerning indicators. Return ONLY a JSON array of symptoms with this exact format: [{\"symptom\": \"symptom name\", \"severity\": \"mild|moderate|severe\", \"source\": \"where it was found\"}]. No other text.",
             context: "Medical Data:\n\(medicalData)"
@@ -119,17 +123,13 @@ From now on, act as my expert assistant with access to all your reasoning and kn
         }
     }
 
-    func analyzeCauses(apiKey: String, symptoms: [String], medicalHistory: String? = nil) async throws -> CausesResponse {
+    func analyzeCauses(apiKey: String, symptoms: [String], medicalHistory: String) async throws -> CausesResponse {
         let symptomsText = symptoms.joined(separator: ", ")
-        var contextText = "Symptoms: \(symptomsText)"
-        if let history = medicalHistory, !history.isEmpty {
-            contextText += "\n\nContext:\n\(history)"
-        }
-        
-        let response = try await callClaude(
+
+        let (response, inputTokens, outputTokens) = try await callClaude(
             apiKey: apiKey,
-            prompt: "Analyze these symptoms and provide the top 3 potential medical causes/conditions. Format as JSON: {\"causes\": [{\"condition\": \"name\", \"probability\": \"high|medium|low\", \"explanation\": \"concise reason\", \"urgency\": \"immediate|soon|routine\"}]}. Return ONLY valid JSON. Keep explanations concise. Ensure all enum values (probability, urgency) are lowercase.",
-            context: contextText
+            prompt: "Given the following symptoms and medical history, identify potential medical conditions or causes. Provide a JSON object with a 'causes' array. Each cause should have 'condition' (string), 'probability' (enum: 'high', 'medium', 'low'), 'explanation' (string), and 'urgency' (enum: 'immediate', 'urgent', 'moderate', 'routine'). Return ONLY the JSON object, no other text.",
+            context: "Symptoms: \(symptomsText)\nMedical History: \(medicalHistory)"
         )
 
         // Extract JSON from response
@@ -137,27 +137,21 @@ From now on, act as my expert assistant with access to all your reasoning and kn
 
         print("====== CAUSES ANALYSIS DEBUG ======")
         print("Raw Response: \(response)")
-        print("Extracted JSON: \(jsonString)")
-
-        // If the response is an array, wrap it in the expected object format
-        jsonString = jsonString.trimmingCharacters(in: .whitespacesAndNewlines)
-        if jsonString.hasPrefix("[") {
-            jsonString = "{\"causes\": \(jsonString)}"
-            print("Wrapped array in object format: \(jsonString)")
-        }
-        print("===================================")
+        // Additional cleanup for common issues
+        jsonString = jsonString
+            .replacingOccurrences(of: "\\n", with: "")
+            .replacingOccurrences(of: "\n", with: "")
 
         guard let jsonData = jsonString.data(using: .utf8) else {
-            let errorMsg = "Could not parse causes from response. Raw response: \(response)"
-            print(errorMsg)
-            throw NSError(domain: "ClaudeAPI", code: -1, userInfo: [NSLocalizedDescriptionKey: errorMsg])
+            throw NSError(domain: "ClaudeAPI", code: -1, userInfo: [NSLocalizedDescriptionKey: "Could not parse causes from response"])
         }
 
         let decoder = JSONDecoder()
         do {
             let result = try decoder.decode(CausesResponse.self, from: jsonData)
             print("Successfully decoded \(result.causes.count) causes")
-            return result
+            // Return with token counts
+            return CausesResponse(causes: result.causes, inputTokens: inputTokens, outputTokens: outputTokens)
         } catch let DecodingError.keyNotFound(key, context) {
             let errorMsg = "Missing key '\(key.stringValue)' in JSON. Path: \(context.codingPath). JSON: \(jsonString)"
             print("Decoding Error: \(errorMsg)")
@@ -202,27 +196,30 @@ From now on, act as my expert assistant with access to all your reasoning and kn
         
         let fullContext = contextParts.joined(separator: "\n")
         
-        return try await callClaude(
+        let (text, _, _) = try await callClaude(
             apiKey: apiKey,
             prompt: message,
             context: fullContext
         )
+        return text
     }
     
     func chatAboutSymptom(apiKey: String, message: String, symptom: Symptom) async throws -> String {
-        return try await callClaude(
+        let (text, _, _) = try await callClaude(
             apiKey: apiKey,
             prompt: message,
             context: "Symptom: \(symptom.symptom)\nSeverity: \(symptom.severity.rawValue)\nSource Context: \(symptom.source)"
         )
+        return text
     }
     
     func chatAboutCause(apiKey: String, message: String, cause: MedicalCause) async throws -> String {
-        return try await callClaude(
+        let (text, _, _) = try await callClaude(
             apiKey: apiKey,
             prompt: message,
             context: "Condition: \(cause.condition)\nProbability: \(cause.probability.rawValue)\nExplanation: \(cause.explanation)\nUrgency: \(cause.urgency.rawValue)"
         )
+        return text
     }
 
 

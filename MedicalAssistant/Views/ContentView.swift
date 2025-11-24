@@ -28,14 +28,16 @@ struct ContentView: View {
                             TabButton(title: "Causes", icon: "cross.case", isSelected: viewModel.selectedTab == 2) {
                                 viewModel.selectedTab = 2
                             }
-                            TabButton(title: "Treatments", icon: "pills.fill", isSelected: viewModel.selectedTab == 3) {
+                            TabButton(title: "Treatments", icon: "cross.case.fill", isSelected: viewModel.selectedTab == 3) {
                                 viewModel.selectedTab = 3
                             }
+                            
+                            TabButton(title: "Questions", icon: "questionmark.circle.fill", isSelected: viewModel.selectedTab == 6) {
+                                viewModel.selectedTab = 6
+                            }
+                            
                             TabButton(title: "Settings", icon: "gearshape.fill", isSelected: viewModel.selectedTab == 4) {
                                 viewModel.selectedTab = 4
-                            }
-                            TabButton(title: "Debug", icon: "ladybug.fill", isSelected: viewModel.selectedTab == 5) {
-                                viewModel.selectedTab = 5
                             }
                         }
                         .padding(.horizontal)
@@ -53,7 +55,7 @@ struct ContentView: View {
                         case 2: CausesView()
                         case 3: TreatmentsView()
                         case 4: SettingsView()
-                        case 5: DebugView()
+                        case 6: QuestionsView()
                         default: UploadView()
                         }
                     }
@@ -122,13 +124,13 @@ struct ContentView: View {
 
     var currentTabTitle: String {
         switch viewModel.selectedTab {
-        case 0: return "Symptoms"
-        case 1: return "Confirm"
+        case 0: return "Upload"
+        case 1: return "Symptoms"
         case 2: return "Causes"
         case 3: return "Treatments"
         case 4: return "Settings"
-        case 5: return "Debug"
-        default: return ""
+        case 6: return "Questions"
+        default: return "Medical Assistant"
         }
     }
 }

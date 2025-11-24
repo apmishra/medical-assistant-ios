@@ -123,15 +123,58 @@ struct SettingsView: View {
                                 .foregroundColor(.secondary)
                         }
                         Slider(value: Binding(
-                            get: { Double(viewModel.treatmentRecommendationCount) },
-                            set: { viewModel.treatmentRecommendationCount = Int($0) }
-                        ), in: 1...10, step: 1)
-                        Text("Number of treatment options to request per category (1-10)")
-                            .font(.caption2)
+                        get: { Double(viewModel.treatmentRecommendationCount) },
+                        set: { viewModel.treatmentRecommendationCount = Int($0) }
+                    ), in: 1...10, step: 1)
+                    
+                    Text("\(viewModel.treatmentRecommendationCount) recommendations")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                .padding()
+                .background(Color(.systemGray6))
+                .cornerRadius(12)
+                
+                // Question Answer Count
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Question Answer Count")
+                        .font(.headline)
+                    
+                    Text("Number of answers to generate for each doctor question")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    
+                    Slider(value: Binding(
+                        get: { Double(viewModel.questionAnswerCount) },
+                        set: { viewModel.questionAnswerCount = Int($0) }
+                    ), in: 1...10, step: 1)
+                    
+                    Text("\(viewModel.questionAnswerCount) answers")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                .padding()
+                .background(Color(.systemGray6))
+                .cornerRadius(12)
+                
+                // Debug Button
+                NavigationLink(destination: DebugView().environmentObject(viewModel)) {
+                    HStack {
+                        Image(systemName: "ladybug.fill")
+                            .foregroundColor(.orange)
+                        Text("Debug Logs")
+                            .font(.headline)
+                        Spacer()
+                        Image(systemName: "chevron.right")
                             .foregroundColor(.secondary)
                     }
-                    
-                    Button(action: {
+                    .padding()
+                    .background(Color(.systemGray6))
+                    .cornerRadius(12)
+                }
+                .buttonStyle(PlainButtonStyle())
+                
+                Button(action: {
                         viewModel.saveLLMTuningParameters(
                             temperature: viewModel.temperature,
                             maxTokens: viewModel.maxTokens,

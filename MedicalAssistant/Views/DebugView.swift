@@ -12,49 +12,128 @@ struct DebugView: View {
     @State private var showCopiedConfirmation = false
 
     var body: some View {
-        VStack(spacing: 16) {
-            // Header
-            HStack {
-                Text("Debug Logs")
-                    .font(.title2)
-                    .bold()
-
-                Spacer()
-                
-                Button(action: {
-                    copyLogsToClipboard()
-                }) {
-                    HStack(spacing: 4) {
-                        Image(systemName: showCopiedConfirmation ? "checkmark" : "doc.on.doc")
-                        Text(showCopiedConfirmation ? "Copied!" : "Copy Logs")
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                // Header
+                HStack {
+                    Text("Debug Logs")
+                        .font(.largeTitle)
+                        .fontWeight(.bold)
+                    
+                    Spacer()
+                    
+                    Button(action: {
+                        viewModel.debugLogs.removeAll()
+                        viewModel.totalInputTokens = 0
+                        viewModel.totalOutputTokens = 0
+                    }) {
+                        HStack {
+                            Image(systemName: "trash")
+                            Text("Clear")
+                        }
+                        .foregroundColor(.red)
                     }
-                    .font(.caption)
-                    .foregroundColor(showCopiedConfirmation ? .green : .blue)
                 }
-                .disabled(viewModel.debugLogs.isEmpty)
-
-                Button(action: {
-                    viewModel.clearDebugLogs()
-                }) {
-                    Text("Clear Logs")
-                        .font(.caption)
-                        .foregroundColor(.blue)
+                .padding(.horizontal)
+                
+                // Token Usage Summary Table
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Token Usage Summary")
+                        .font(.headline)
+                        .padding(.horizontal)
+                    
+                    VStack(spacing: 0) {
+                        // Header Row
+                        HStack {
+                            Text("Type")
+                                .font(.subheadline)
+                                .fontWeight(.semibold)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                            
+                            Text("Count")
+                                .font(.subheadline)
+                                .fontWeight(.semibold)
+                                .frame(width: 100, alignment: .trailing)
+                        }
+                        .padding()
+                        .background(Color.blue.opacity(0.1))
+                        
+                        Divider()
+                        
+                        // Input Tokens Row
+                        HStack {
+                            Text("Input Tokens")
+                                .font(.body)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                            
+                            Text("\(viewModel.totalInputTokens)")
+                                .font(.body)
+                                .fontWeight(.medium)
+                                .frame(width: 100, alignment: .trailing)
+                        }
+                        .padding()
+                        .background(Color(.systemGray6))
+                        
+                        Divider()
+                        
+                        // Output Tokens Row
+                        HStack {
+                            Text("Output Tokens")
+                                .font(.body)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                            
+                            Text("\(viewModel.totalOutputTokens)")
+                                .font(.body)
+                                .fontWeight(.medium)
+                                .frame(width: 100, alignment: .trailing)
+                        }
+                        .padding()
+                        .background(Color(.systemGray6))
+                        
+                        Divider()
+                        
+                        // Total Row
+                        HStack {
+                            Text("Total Tokens")
+                                .font(.body)
+                                .fontWeight(.semibold)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                            
+                            Text("\(viewModel.totalInputTokens + viewModel.totalOutputTokens)")
+                                .font(.body)
+                                .fontWeight(.bold)
+                                .foregroundColor(.blue)
+                                .frame(width: 100, alignment: .trailing)
+                        }
+                        .padding()
+                        .background(Color.blue.opacity(0.05))
+                    }
+                    .cornerRadius(12)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(Color(.systemGray4), lineWidth: 1)
+                    )
+                    .padding(.horizontal)
                 }
-            }
-            .padding()
-
-            // Logs
-            ScrollView {
-                VStack(alignment: .leading, spacing: 8) {
-                    if viewModel.debugLogs.isEmpty {
-                        Text("No debug logs yet...")
-                            .foregroundColor(.secondary)
-                            .padding()
-                    } else {
+                
+                Divider()
+                    .padding(.vertical, 8)
+                
+                // Activity Logs Section
+                Text("Activity Logs")
+                    .font(.headline)
+                    .padding(.horizontal)
+                
+                if viewModel.debugLogs.isEmpty {
+                    Text("No debug logs yet...")
+                        .foregroundColor(.secondary)
+                        .padding()
+                } else {
+                    VStack(alignment: .leading, spacing: 8) {
                         ForEach(viewModel.debugLogs) { log in
                             VStack(alignment: .leading, spacing: 4) {
                                 HStack(alignment: .top, spacing: 8) {
-                                    Text("[\(log.timestamp)]")
+                                    Text("[\(formatTimestamp(log.timestamp))]")
                                         .font(.system(.caption, design: .monospaced))
                                         .foregroundColor(.secondary)
 
@@ -74,54 +153,21 @@ struct DebugView: View {
                             .textSelection(.enabled)
                         }
                     }
+                    .padding(.vertical)
                 }
-                .padding(.vertical)
             }
-            .background(Color.black)
-            .cornerRadius(8)
-            .padding(.horizontal)
-
-            Divider()
-
-            // System Information
-            VStack(alignment: .leading, spacing: 12) {
-                Text("System Information")
-                    .font(.headline)
-                    .padding(.horizontal)
-
-                VStack(spacing: 8) {
-                    InfoRow(label: "API Key Status", value: viewModel.apiKey.isEmpty ? "Not Configured" : "Configured", valueColor: viewModel.apiKey.isEmpty ? .red : .green)
-                    InfoRow(label: "Total API Calls", value: "\(viewModel.debugLogs.filter { $0.message.contains("API call") }.count)")
-                    InfoRow(label: "Errors", value: "\(viewModel.debugLogs.filter { $0.type == .error }.count)")
-                    InfoRow(label: "Model", value: "claude-sonnet-4-20250514")
-                }
-                .padding(.horizontal)
-            }
-
-            Spacer()
+            .padding(.vertical)
         }
     }
     
-    private func copyLogsToClipboard() {
-        let logsText = viewModel.debugLogs.map { log in
-            var logEntry = "[\(log.timestamp)] \(log.message)"
-            if let input = log.inputTokens, let output = log.outputTokens {
-                logEntry += "\nTokens: \(input) in / \(output) out"
-            }
-            return logEntry
-        }.joined(separator: "\n\n")
-        
-        #if os(iOS)
-        UIPasteboard.general.string = logsText
-        #elseif os(macOS)
-        NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(logsText, forType: .string)
-        #endif
-        
-        showCopiedConfirmation = true
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-            showCopiedConfirmation = false
+    private func formatTimestamp(_ timestamp: String) -> String {
+        let formatter = ISO8601DateFormatter()
+        if let date = formatter.date(from: timestamp) {
+            let displayFormatter = DateFormatter()
+            displayFormatter.timeStyle = .medium
+            return displayFormatter.string(from: date)
         }
+        return timestamp
     }
 
     private func logColor(for type: DebugLog.LogType) -> Color {
@@ -130,26 +176,6 @@ struct DebugView: View {
         case .success: return .green
         case .warning: return .yellow
         case .error: return .red
-        }
-    }
-}
-
-struct InfoRow: View {
-    let label: String
-    let value: String
-    var valueColor: Color = .primary
-
-    var body: some View {
-        HStack {
-            Text(label)
-                .font(.caption)
-                .foregroundColor(.secondary)
-
-            Spacer()
-
-            Text(value)
-                .font(.caption)
-                .foregroundColor(valueColor)
         }
     }
 }

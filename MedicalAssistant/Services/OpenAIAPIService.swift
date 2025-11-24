@@ -177,12 +177,15 @@ class OpenAIAPIService: @unchecked Sendable {
     func analyzeCauses(apiKey: String, symptoms: [String], medicalHistory: String? = nil) async throws -> CausesResponse {
         let system = """
         Analyze the symptoms and provide top 3 potential medical causes.
+        For each cause, include 5 specific questions the patient should ask their doctor.
+        
         Return a JSON object with a key "causes" containing an array of objects.
         Each object must have:
         - "condition": Name of the condition
         - "probability": "high", "medium", or "low"
         - "explanation": Concise reason
         - "urgency": "immediate", "soon", or "routine"
+        - "recommendedQuestions": Array of 5 specific questions for the doctor
         """
         
         var userMessage = "Symptoms: \(symptoms.joined(separator: ", "))"
@@ -212,7 +215,8 @@ class OpenAIAPIService: @unchecked Sendable {
             let condition: String
             let probability: String
             let explanation: String
-            let urgency: String?
+            let urgency: String? // Optional in case model misses it
+            let recommendedQuestions: [String]? // Optional in case model misses it
         }
         
         let rawResponse = try JSONDecoder().decode(RawCausesResponse.self, from: data)
@@ -230,7 +234,13 @@ class OpenAIAPIService: @unchecked Sendable {
             else if urgString.contains("soon") { urg = .soon }
             else { urg = .routine }
             
-            return MedicalCause(condition: raw.condition, probability: prob, explanation: raw.explanation, urgency: urg)
+            return MedicalCause(
+                condition: raw.condition,
+                probability: prob,
+                explanation: raw.explanation,
+                urgency: urg,
+                recommendedQuestions: raw.recommendedQuestions ?? []
+            )
         }
         
         return CausesResponse(causes: validCauses)

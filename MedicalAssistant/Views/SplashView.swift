@@ -13,14 +13,47 @@ struct SplashView: View {
     @State private var newName = ""
     @State private var searchText = ""
     @State private var showMedicalHistory = false
-
+    
+    // Filter sessions based on search text
     var filteredSessions: [MedicalSession] {
-        let sessions = viewModel.sessions
-
         if searchText.isEmpty {
-            return sessions
+            return viewModel.sessions
         } else {
-            return sessions.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
+            return viewModel.sessions.filter { session in
+                // Search in session name
+                if session.name.localizedCaseInsensitiveContains(searchText) {
+                    return true
+                }
+                
+                // Search in symptoms
+                if session.confirmedSymptoms.contains(where: { $0.symptom.localizedCaseInsensitiveContains(searchText) }) {
+                    return true
+                }
+                
+                // Search in causes
+                if session.selectedCauses.contains(where: { $0.condition.localizedCaseInsensitiveContains(searchText) }) {
+                    return true
+                }
+                
+                // Search in treatments
+                if session.selectedTreatments.contains(where: { $0.name.localizedCaseInsensitiveContains(searchText) || $0.description.localizedCaseInsensitiveContains(searchText) }) {
+                    return true
+                }
+                
+                // Also search in treatments by cause
+                for treatments in session.treatmentsByCause.values {
+                    if treatments.contains(where: { $0.name.localizedCaseInsensitiveContains(searchText) || $0.description.localizedCaseInsensitiveContains(searchText) }) {
+                        return true
+                    }
+                }
+                
+                // Search in questions
+                if session.selectedQuestions.contains(where: { $0.question.localizedCaseInsensitiveContains(searchText) }) {
+                    return true
+                }
+                
+                return false
+            }
         }
     }
 
@@ -87,33 +120,36 @@ struct SplashView: View {
 
                 Divider()
 
-                // Sessions view
-                if groupedSessions.isEmpty {
-                    // Empty state
-                    VStack(spacing: 20) {
-                        Spacer()
+                // Sessions view - Always show List to keep search bar accessible
+                List {
+                    if groupedSessions.isEmpty {
+                        // Empty state
+                        Section {
+                            VStack(spacing: 20) {
+                                Image(systemName: searchText.isEmpty ? "calendar.badge.plus" : "magnifyingglass")
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(width: 60, height: 60)
+                                    .foregroundColor(.gray)
+                                    .padding(.top, 40)
 
-                        Image(systemName: "calendar.badge.plus")
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: 80, height: 80)
-                            .foregroundColor(.gray)
+                                Text(searchText.isEmpty ? "No Sessions Yet" : "No Results")
+                                    .font(.title2)
+                                    .fontWeight(.semibold)
 
-                        Text("No Sessions Yet")
-                            .font(.title2)
-                            .fontWeight(.semibold)
-
-                        Text("Tap the + button to create your first session")
-                            .font(.body)
-                            .foregroundColor(.secondary)
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal, 40)
-
-                        Spacer()
-                    }
-                } else {
-                    // Sessions list
-                    List {
+                                Text(searchText.isEmpty ? "Tap the + button to create your first session" : "No sessions match '\(searchText)'")
+                                    .font(.body)
+                                    .foregroundColor(.secondary)
+                                    .multilineTextAlignment(.center)
+                                    .padding(.horizontal, 40)
+                                    .padding(.bottom, 40)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .listRowBackground(Color.clear)
+                            .listRowSeparator(.hidden)
+                        }
+                    } else {
+                        // Sessions list
                         ForEach(groupedSessions, id: \.0) { dateString, sessions in
                             Section {
                                 ForEach(sessions) { session in
@@ -137,9 +173,9 @@ struct SplashView: View {
                             }
                         }
                     }
-                    .listStyle(.insetGrouped)
-                    .searchable(text: $searchText, prompt: "Search sessions")
                 }
+                .listStyle(.insetGrouped)
+                .searchable(text: $searchText, prompt: "Search sessions")
             }
             .navigationBarHidden(true)
             .alert("Rename Session", isPresented: Binding(

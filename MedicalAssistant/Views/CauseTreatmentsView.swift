@@ -245,12 +245,20 @@ struct TreatmentWithCheckbox: View {
 
 struct CauseTreatmentsView_Previews: PreviewProvider {
     static var previews: some View {
-        CauseTreatmentsView(cause: MedicalCause(
-            condition: "Hypertension",
+        let sampleCause = MedicalCause(
+            condition: "Common Cold",
             probability: .high,
-            explanation: "Elevated blood pressure that requires medical attention",
-            urgency: .routine
-        ))
+            explanation: "Symptoms match typical cold presentation",
+            urgency: .routine,
+            recommendedQuestions: [
+                "How long should I expect symptoms to last?",
+                "When should I be concerned about complications?",
+                "Are there any warning signs I should watch for?",
+                "What over-the-counter medications are safe?",
+                "Should I avoid any activities while recovering?"
+            ]
+        )
+        CauseTreatmentsView(cause: sampleCause)
         .environmentObject(MedicalAssistantViewModel())
     }
 }

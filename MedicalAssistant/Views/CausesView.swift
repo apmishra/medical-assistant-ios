@@ -128,6 +128,7 @@ struct DisclaimerBanner: View {
 
 struct CauseCard: View {
     let cause: MedicalCause
+    @State private var showingQuestions = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -147,10 +148,29 @@ struct CauseCard: View {
             Text(cause.explanation)
                 .font(.body)
                 .foregroundColor(.secondary)
+            
+            // Questions for Doctor Button
+            Button(action: {
+                showingQuestions = true
+            }) {
+                HStack {
+                    Image(systemName: "questionmark.circle.fill")
+                    Text("Questions for Doctor (\(cause.recommendedQuestions.count))")
+                        .font(.subheadline)
+                }
+                .padding(.vertical, 8)
+                .padding(.horizontal, 12)
+                .background(Color.blue.opacity(0.1))
+                .foregroundColor(.blue)
+                .cornerRadius(8)
+            }
         }
         .padding()
         .background(Color(.systemGray6))
         .cornerRadius(12)
+        .sheet(isPresented: $showingQuestions) {
+            DoctorQuestionsView(cause: cause)
+        }
     }
 }
 
